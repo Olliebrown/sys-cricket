@@ -3,6 +3,8 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
+#include <map>
+#include <vector>
 #include <string>
 
 class RESTServer : public ThreadedServer {
@@ -14,10 +16,12 @@ protected:
   // Sockets and addresses
   int sockConn, sockStream;
   struct sockaddr_in client, server;
+  std::map<uint32_t, struct sockaddr_in> streamClients;
 
   // Internal timers and events
   UTimer updateTimer;
   UEvent exitEvent;
+  std::vector<UTimer> streamTimers;
 
   // Override thread methods
   virtual bool threadInit();

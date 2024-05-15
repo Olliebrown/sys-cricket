@@ -72,7 +72,11 @@
     "semaphore": "cpp",
     "span": "cpp",
     "stop_token": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "any": "cpp",
+    "codecvt": "cpp",
+    "forward_list": "cpp",
+    "valarray": "cpp"
   },
   "cSpell.words": [
     "Berrier",

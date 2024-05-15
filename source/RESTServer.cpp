@@ -32,7 +32,7 @@ RESTServer::RESTServer() : ThreadedServer(false) {
 
 bool RESTServer::threadInit() {
   // Initialize timer and event handles
-  utimerCreate(&updateTimer, 10000000, TimerType_Repeating); // 1/100s
+  utimerCreate(&updateTimer, 100000000, TimerType_Repeating); // 1/10s
   ueventCreate(&exitEvent, false);
 
   // Initialize the connection socket
