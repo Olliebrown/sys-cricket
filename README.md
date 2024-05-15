@@ -39,10 +39,10 @@ The node.js tools are best run on the local computer and not in the docker conta
 Many scripts and tools need to know the IP address of the switch as well as ftp credentials as you've defined them on your switch. These are defined in the .env file in the root directory and in the util directory. See example.env for the expected format and supported variables.
 
 ## Client Applications
-Any client application can communicate with sys-cricket via UDP.  An example client application (written in node.js) will eventually be made available around when the first version of sys-cricket is released. Messages are always sent and received in JSON and documentation will be provided for the expected structure of these messages in the future.
+Any client application can communicate with sys-cricket via UDP. An example client application (written in node.js) will eventually be made available around when the first version of sys-cricket is released. Messages are always sent and received in JSON and documentation will be provided for the expected structure of these messages in the future.
 
 ## Credits
 I explored and emulated a multitude of other switch homebrew projects while working on this including:
-- sys-http
-- botw-save-state
-- Many examples in the libnx repository
+- [sys-http](https://github.com/zaksabeast/sys-http)
+- [botw-save-state](https://github.com/Pistonight/botw-save-state)
+- Many examples in the [switchbrew repository](https://github.com/switchbrew/switch-examples)
