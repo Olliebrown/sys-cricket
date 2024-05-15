@@ -1,0 +1,29 @@
+{
+  "name": "cricket-util",
+  "version": "0.1.0",
+  "description": "Utilities for the sys-cricket project.",
+  "main": "client.js",
+  "type": "module",
+  "scripts": {
+    "log": "node ./nxlink.js",
+    "client": "node ./client.js"
+  },
+  "prettier": {
+    "editorconfig": true
+  },
+  "author": "Seth Berrier",
+  "license": "MIT",
+  "dependencies": {
+    "debug": "^4.3.4",
+    "dotenv": "^16.4.4",
+    "eslint": "^8.56.0",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-n": "^16.6.2",
+    "eslint-plugin-promise": "^6.1.1",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "^3.2.5",
+    "prettier-eslint": "^16.3.0"
+  }
+}

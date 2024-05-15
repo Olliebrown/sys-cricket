@@ -1,0 +1,15 @@
+- Cur Health:             [[[[[main+45D6750]+480]+130]+1F0]+150]+198
+- Max Health:             [[[[[main+45D6750]+480]+130]+1F0]+150]+1A8
+- Cur Stamina:            [[main+4649C10]+40]+934
+- Bonus Stamina:          [[main+4649C10]+40]+938
+- Mesh Transform Matrix:  [[[[main+4649DE8]+70]+1A8]]+58
+- Havok Transform Matrix: [[[main+45BA998]+60]+20]+18C0
+  (Note, this seems to be transposed / column-major)
+
+// URLs
+Cur Health: /readMainPointer?offset=45D6750,480,130,1F0,150,198&count=1&type=i32
+Max Health: /readMainPointer?offset=45D6750,480,130,1F0,150,1A8&count=1&type=i32
+Cur Stamina: /readMainPointer?offset=4649C10,40,934&count=1&type=f32
+Bonus Stamina: /readMainPointer?offset=4649C10,40,938&count=1&type=f32
+Mesh Transform Matrix: /readMainPointer?offset=4649DE8,70,1A8,0,58&count=16&type=f32
+Havok Transform Matrix: /readMainPointer?offset=45BA998,60,20,18C0&count=16&type=f32

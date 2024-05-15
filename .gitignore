@@ -1,0 +1,21 @@
+# Output folders
+out
+build
+dist
+
+# Environment config and secrets
+.env
+
+# Compiled files
+*.elf
+*.npdm
+*.nsp
+*.nsp
+*.nso
+*.stub*
+
+# OS Files
+.DS_Store
+
+# node dependencies
+node_modules
