@@ -4,7 +4,7 @@ sys-cricket is a sysmodule for the Nintendo Switch that allows for streaming val
 ## ACTIVE DEVELOPMENT
 This tool is in active development. It was originally started as a side project to develop a snapshot tool for Tears of the Kingdom but while exploring how this works, a more general approach was adopted. As the speedrunning community became more interested in blindfolded runs, it was decided that simply reading out precise information (like the player's and camera's full transformation as well as velocities and relative distances) would be immediately useful. This is the current focus of development.
 
-Currently, it will only read specific locations defined at compile time (the transformation matrices for the player character and camera) but it is planned to allow custom locations with optional pointer offsets to be specified when connecting as well as the shape, size, and format of the data expected there.
+On first release (which has not yet happened), it will only read specific locations defined at compile time (the transformation matrices for the player character and camera) but it is planned to allow custom locations with optional pointer offsets to be specified when connecting as well as the shape, size, and format of the data expected there.
 
 ## Planned Features
 There is a vague intention to implement the following:
@@ -25,6 +25,7 @@ The following commands are useful for building and deploying or debugging the pr
 - `make` - Builds the project
 - `make clean` - Cleans previous intermediate files
 - `make deploy-ftp` - Builds the project and sends it to the switch via ftp
+- `make getlog-ftp` - Download the log file from the switch via ftp (helpful if nxlink logs are not working)
 
 In order for ftp deployment to work, you need an ftp server installed and running on your switch (like [sys-ftps-light](https://github.com/cathery/sys-ftpd)). You can define your ftp credentials a .env file (see example.env for details).
 
@@ -38,7 +39,7 @@ The node.js tools are best run on the local computer and not in the docker conta
 Many scripts and tools need to know the IP address of the switch as well as ftp credentials as you've defined them on your switch. These are defined in the .env file in the root directory and in the util directory. See example.env for the expected format and supported variables.
 
 ## Client Applications
-Any client application can communicate with sys-cricket via UDP.  An example client application (written in node.js) is available at [client-cricket](https://github.com/Olliebrown/client-cricket).  Messages are always sent and received in JSON and documentation will be provided for the expected structure of these messages in the future.
+Any client application can communicate with sys-cricket via UDP.  An example client application (written in node.js) will eventually be made available around when the first version of sys-cricket is released. Messages are always sent and received in JSON and documentation will be provided for the expected structure of these messages in the future.
 
 ## Credits
 I explored and emulated a multitude of other switch homebrew projects while working on this including:
