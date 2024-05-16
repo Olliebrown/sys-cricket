@@ -1,8 +1,8 @@
 #pragma once
 
+#include "Title.h"
 #include "debugger.h"
 #include "dmntcht.h"
-#include "Title.h"
 
 #include <functional>
 #include <string>
@@ -13,13 +13,15 @@ class GameReader {
   ~GameReader();
 
   Result RefreshMetadata(bool forceRefresh = false);
-  Result GetTitleId(u64 *titleId);
-  Result GetTitleInfo(std::string &titleName, std::string &titleAuthor, std::string &titleVersion, u8 &errorCode);
-  Result GetAllMetadata(char* &metadataJson);
-  Result GetIcon(u8* &iconData, u64 &dataSize);
+  Result GetTitleId(u64* titleId);
+  Result GetTitleInfo(std::string& titleName, std::string& titleAuthor, std::string& titleVersion,
+                      u8& errorCode);
+  Result GetAllMetadata(char*& metadataJson);
+  Result GetIcon(u8*& iconData, u64& dataSize);
 
-  Result ReadMemoryDirect(bool heapMemory, u64 offset, void *buffer, size_t size);
-  Result ReadMemoryPointer(bool heapMemory, const std::vector<u64>& offsets, void *buffer, size_t size);
+  Result ReadMemoryDirect(bool heapMemory, u64 offset, void* buffer, size_t size);
+  Result ReadMemoryPointer(bool heapMemory, const std::vector<u64>& offsets, void* buffer,
+                           size_t size);
 
  private:
   bool m_hasMetadata = false;

@@ -99,6 +99,7 @@
     "newlib",
     "nxlink",
     "pminfo",
+    "rapidjson",
     "roboto",
     "sdmc",
     "servedir",
@@ -106,5 +107,6 @@
     "sysmodule",
     "uevent",
     "utimer"
-  ]
+  ],
+  "clang-format.executable": "clang-format-12"
 }

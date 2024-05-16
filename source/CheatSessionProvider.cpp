@@ -7,7 +7,7 @@ Debugger* CheatSessionProvider::s_debugger = nullptr;
 Title* CheatSessionProvider::s_runningGameTitle = nullptr;
 
 Result CheatSessionProvider::doWithCheatSession(std::function<Result()> func) {
- if (s_debugger == nullptr) {
+  if (s_debugger == nullptr) {
     s_debugger = new Debugger();
 
     if (dmntPresent()) {
@@ -48,10 +48,10 @@ bool CheatSessionProvider::dmntPresent() {
   for (s32 i = 0; i < num_process_ids; ++i) {
     if (R_SUCCEEDED(pminfoGetProgramId(&titeID, process_ids[i]))) {
       if (titeID == 0x010000000000000D) {
-          return true;
+        return true;
       }
     }
   }
-  
+
   return false;
 }

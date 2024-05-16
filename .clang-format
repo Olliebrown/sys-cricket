@@ -9,7 +9,7 @@ BreakConstructorInitializers: AfterColon
 ColumnLimit: 100
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 NamespaceIndentation: All
-PointerAlignment: Right
+PointerAlignment: Left
 IndentWidth: 2
 IndentCaseLabels: true
 UseTab: Never

@@ -2,9 +2,9 @@
 
 // This class is a base class for creating a server that runs in its own thread
 class ThreadedServer {
-public:
-  ThreadedServer(bool newAutoExit = true) : autoExit(newAutoExit) {}
-  virtual ~ThreadedServer() {}
+ public:
+  ThreadedServer(bool newAutoExit = true) : autoExit(newAutoExit) { }
+  virtual ~ThreadedServer() { }
 
   // Attempt to start the server (only one server can be running at a time)
   bool startServer();
@@ -13,7 +13,7 @@ public:
   static void printf(const char* fmt, ...);
   static void perror(const char* fmt, ...);
 
-protected:
+ protected:
   // Should the thread be automatically exited when the main function returns
   bool autoExit;
 

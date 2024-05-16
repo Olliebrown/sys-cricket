@@ -4,24 +4,27 @@
 #include <sys/socket.h>
 
 #include <map>
-#include <vector>
 #include <string>
+#include <vector>
 
 class RESTServer : public ThreadedServer {
-public:
+ public:
   RESTServer();
-  virtual ~RESTServer() {}
+  virtual ~RESTServer() { }
 
-protected:
+ protected:
   // Sockets and addresses
   int sockConn, sockStream;
   struct sockaddr_in client, server;
-  std::map<uint32_t, struct sockaddr_in> streamClients;
+  std::map<u64, int> streamSockets;
 
   // Internal timers and events
-  UTimer updateTimer;
+  UTimer connectTimer;
   UEvent exitEvent;
-  std::vector<UTimer> streamTimers;
+
+  // Timers and waitable objects for all requested data blocks
+  std::vector<UTimer> timers;
+  std::vector<Waiter> waiters;
 
   // Override thread methods
   virtual bool threadInit();
@@ -32,8 +35,8 @@ protected:
   virtual void serverMain();
 
   // Communication functions
-  bool initSocket(int &sockOut, sockaddr_in addrConfig, const std::string &description);
-  bool remoteConnect(int &sockOut, sockaddr_in addrConfig);
+  bool initSocket(int& sockOut, sockaddr_in addrConfig, const std::string& description);
+  bool remoteConnect(int& sockOut, sockaddr_in addrConfig);
 
   bool connectionReceive();
   bool streamSendData();
