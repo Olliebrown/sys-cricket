@@ -1,10 +1,10 @@
 #include "utils.h"
 
+#include <cstring>
 #include <iomanip>
 #include <vector>
-#include <cstring>
 
-std::string convertByteArrayToHex(u8 *bytes, size_t size) {
+std::string convertByteArrayToHex(u8* bytes, size_t size) {
   std::stringstream stream;
 
   stream << std::setfill('0') << std::hex;
@@ -18,13 +18,15 @@ std::string convertByteArrayToHex(u8 *bytes, size_t size) {
 
 std::string convertNumToHexString(u64 num, int width, bool withPrefix) {
   std::stringstream hex;
-  if (withPrefix) { hex << "0x"; }
+  if (withPrefix) {
+    hex << "0x";
+  }
   hex << std::setfill('0') << std::setw(width) << std::hex << num;
   return hex.str();
 }
 
 int sizeFromType(eRequestDataType dataType) {
-  switch(dataType) {
+  switch (dataType) {
     case eRequestDataType_f64:
     case eRequestDataType_i64:
     case eRequestDataType_u64:
@@ -47,8 +49,7 @@ int sizeFromType(eRequestDataType dataType) {
   }
 }
 
-float interpretAsFloat(u8* buffer)
-{
+float interpretAsFloat(u8* buffer) {
   u8 swapped[4] = { buffer[0], buffer[1], buffer[2], buffer[3] };
 
   float result;
@@ -56,16 +57,16 @@ float interpretAsFloat(u8* buffer)
   return result;
 }
 
-double interpretAsDouble(u8* buffer)
-{
-  u8 swapped[8] = {buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7]};
+double interpretAsDouble(u8* buffer) {
+  u8 swapped[8]
+      = { buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5], buffer[6], buffer[7] };
 
   double result;
   std::memcpy(&result, swapped, sizeof(result));
   return result;
 }
 
-bool getParams(const char* body, std::string &offsetStr, eRequestDataType &dataType, u64 &count) {
+bool getParams(const char* body, std::string& offsetStr, eRequestDataType& dataType, u64& count) {
   // Read URL parameters
   // if (req.has_param("offset")) {
   //   offsetStr = req.get_param_value("offset");
@@ -81,7 +82,7 @@ bool getParams(const char* body, std::string &offsetStr, eRequestDataType &dataT
   //     return false;
   //   }
   // }
-  
+
   // if (req.has_param("type")) {
   //   std::string dataTypeStr = req.get_param_value("type");
   //   if (dataTypeStr == "f64") {
@@ -113,20 +114,20 @@ bool getParams(const char* body, std::string &offsetStr, eRequestDataType &dataT
   return true;
 }
 
-std::vector<std::string> interpretDataType(eRequestDataType dataType, u8 *buffer, u64 count) {
+std::vector<std::string> interpretDataType(eRequestDataType dataType, u8* buffer, u64 count) {
   std::vector<std::string> contents;
 
   u64 stride = sizeFromType(dataType);
-  for(u64 i=0; i<count; i++) {
-    u8 *ptr = buffer + i * stride;
-    switch(dataType) {
+  for (u64 i = 0; i < count; i++) {
+    u8* ptr = buffer + i * stride;
+    switch (dataType) {
       case eRequestDataType_u8:
       case eRequestDataType_u16:
       case eRequestDataType_u32:
       case eRequestDataType_u64:
         contents.push_back(convertByteArrayToHex(ptr, stride));
         break;
-      
+
       case eRequestDataType_f64:
         contents.push_back(std::to_string(interpretAsDouble(ptr)));
         break;

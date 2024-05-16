@@ -4,8 +4,7 @@
 #include <cstdio>
 
 // Printf with mutex to avoid thread issues
-void ThreadedServer::printf(const char* fmt, ...)
-{
+void ThreadedServer::printf(const char* fmt, ...) {
   static Mutex printMutex = INVALID_HANDLE;
   mutexLock(&printMutex);
 
@@ -17,8 +16,7 @@ void ThreadedServer::printf(const char* fmt, ...)
   mutexUnlock(&printMutex);
 }
 
-void ThreadedServer::perror(const char* fmt, ...)
-{
+void ThreadedServer::perror(const char* fmt, ...) {
   static Mutex errorMutex = INVALID_HANDLE;
   mutexLock(&errorMutex);
 
@@ -35,8 +33,7 @@ ThreadedServer* ThreadedServer::runningServer = nullptr;
 Thread* ThreadedServer::runningThread = nullptr;
 
 // Thread function to handle timer and exit events
-void ThreadedServer::threadWrapper(void* arg)
-{ 
+void ThreadedServer::threadWrapper(void* arg) {
   if (runningServer != nullptr) {
     runningServer->threadMain();
   }
@@ -57,7 +54,7 @@ bool ThreadedServer::startServer() {
 }
 
 // Main event loop
-int ThreadedServer::runServerThread () {
+int ThreadedServer::runServerThread() {
   // Make sure only one server thread is running
   if (runningThread != nullptr) {
     fprintf(stderr, "Server: thread already running\n");
@@ -86,9 +83,11 @@ int ThreadedServer::runServerThread () {
       serverMain();
 
       // Wait for the thread to exit
-      if (autoExit) { threadExit(); }
+      if (autoExit) {
+        threadExit();
+      }
       printf("Waiting for server thread to exit...\n");
-      threadWaitForExit(&thread); 
+      threadWaitForExit(&thread);
     }
 
     // Close the thread

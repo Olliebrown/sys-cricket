@@ -30,8 +30,8 @@ char fake_heap[HEAP_SIZE];
 
 // we override libnx internals to do a minimal init
 void __libnx_initheap(void) {
-  extern char *fake_heap_start;
-  extern char *fake_heap_end;
+  extern char* fake_heap_start;
+  extern char* fake_heap_end;
 
   // setup newlib fake heap
   fake_heap_start = fake_heap;
@@ -39,7 +39,7 @@ void __libnx_initheap(void) {
 }
 
 void __appInit(void) {
-	/* Initialize services */
+  /* Initialize services */
   nsInitialize();
   smInitialize();
   fsInitialize();
@@ -57,19 +57,21 @@ void __appExit(void) {
   nsExit();
 }
 
-} // extern "C"
+}  // extern "C"
 
 int main() {
   // Redirect stdio to log to files
   int stdioFile = redirectOutputToFile(STDIO_FILE_PATH, false);
   if (stdioFile < 0) {
-    fprintf(stderr, "Error: failed to redirect stdio to file. (%s, %d)\n", STDIO_FILE_PATH, stdioFile);
+    fprintf(stderr, "Error: failed to redirect stdio to file. (%s, %d)\n", STDIO_FILE_PATH,
+            stdioFile);
   }
 
   // Duplicate stdio to a tcp socket host
   int socket = redirectOutputToSockets(STDIO_SOCKET_HOST, STDIO_SOCKET_PORT);
   if (socket < 0) {
-    fprintf(stderr, "Error: failed to connect to logging socket host. (%s:%d, %d)\n", STDIO_SOCKET_HOST, STDIO_SOCKET_PORT, socket);
+    fprintf(stderr, "Error: failed to connect to logging socket host. (%s:%d, %d)\n",
+            STDIO_SOCKET_HOST, STDIO_SOCKET_PORT, socket);
   }
 
   // Start the REST server
