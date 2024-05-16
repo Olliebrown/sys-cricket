@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "StreamSession.h"
+
 class RESTServer : public ThreadedServer {
  public:
   RESTServer();
@@ -14,16 +16,15 @@ class RESTServer : public ThreadedServer {
 
  protected:
   // Sockets and addresses
-  int sockConn, sockStream;
-  struct sockaddr_in client, server;
-  std::map<u64, int> streamSockets;
+  int sockConn;
+  struct sockaddr_in server;
+  std::map<u64, StreamSession*> streams;
 
   // Internal timers and events
   UTimer connectTimer;
   UEvent exitEvent;
 
-  // Timers and waitable objects for all requested data blocks
-  std::vector<UTimer> timers;
+  // Waitable objects for all requested data blocks
   std::vector<Waiter> waiters;
 
   // Override thread methods
@@ -35,9 +36,6 @@ class RESTServer : public ThreadedServer {
   virtual void serverMain();
 
   // Communication functions
-  bool initSocket(int& sockOut, sockaddr_in addrConfig, const std::string& description);
-  bool remoteConnect(int& sockOut, sockaddr_in addrConfig);
-
+  bool initConnectionSocket();
   bool connectionReceive();
-  bool streamSendData();
 };

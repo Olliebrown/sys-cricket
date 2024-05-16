@@ -24,11 +24,8 @@ RESTServer::RESTServer() : ThreadedServer(false) {
   server.sin_port = htons(LISTENING_SOCKET_PORT);
   server.sin_addr.s_addr = INADDR_ANY;
 
-  // Clear the client address
-  memset(&client, 0, sizeof(client));
-
   // Clear the socket handle and port
-  sockConn = sockStream = 0;
+  sockConn = 0;
 }
 
 bool RESTServer::threadInit() {
@@ -39,7 +36,7 @@ bool RESTServer::threadInit() {
   waiters.push_back(waiterForUEvent(&exitEvent));
 
   // Initialize the connection socket
-  if (!initSocket(sockConn, server, "connection")) {
+  if (!initConnectionSocket()) {
     close(sockConn);
     sockConn = 0;
     return false;
@@ -90,23 +87,18 @@ void RESTServer::threadExit() {
 
   // Stop all timers
   utimerStop(&connectTimer);
-  for (auto& timer : timers) {
-    utimerStop(&timer);
-  }
-  timers.clear();
 
   // Close and clear all sockets
   if (sockConn > 0) {
     close(sockConn);
   }
-  if (sockStream > 0) {
-    close(sockStream);
+  sockConn = 0;
+
+  // Close out all running stream sockets
+  for (auto& stream : streams) {
+    delete stream.second;
   }
-  sockConn = sockStream = 0;
-  for (auto& sock : streamSockets) {
-    close(sock.second);
-  }
-  streamSockets.clear();
+  streams.clear();
 }
 
 // Server control function
@@ -114,44 +106,30 @@ void RESTServer::serverMain() {
   utimerStart(&connectTimer);
 }
 
-bool RESTServer::initSocket(int& sockOut, sockaddr_in addrConfig, const std::string& description) {
+bool RESTServer::initConnectionSocket() {
   // Create a UDP socket
-  sockOut = socket(AF_INET, SOCK_DGRAM, 0);
-  if (sockOut < 0) {
-    perror("Server: failed to create %s socket", description.c_str());
+  sockConn = socket(AF_INET, SOCK_DGRAM, 0);
+  if (sockConn < 0) {
+    perror("Server: failed to create connection socket");
     return false;
   }
 
   // Set to non-blocking mode
-  int flags = fcntl(sockOut, F_GETFL, 0);
+  int flags = fcntl(sockConn, F_GETFL, 0);
   if (flags == -1) {
-    perror("Server: can't set non-blocking / failed to read %s socket flags.\n",
-           description.c_str());
-  } else if (fcntl(sockOut, F_SETFL, flags | O_NONBLOCK) != 0) {
-    perror("Server: failed to set %s socket to non-blocking io.\n", description.c_str());
+    perror("Server: can't set non-blocking / failed to read connection socket flags.\n");
+  } else if (fcntl(sockConn, F_SETFL, flags | O_NONBLOCK) != 0) {
+    perror("Server: failed to set connection socket to non-blocking io.\n");
   }
 
-  // Is this a local or remote connection?
-  if (addrConfig.sin_addr.s_addr == INADDR_ANY) {
-    // Bind to a local port
-    if (bind(sockOut, (struct sockaddr*)&addrConfig, sizeof(addrConfig)) < 0) {
-      perror("Server: failed to bind %s socket", description.c_str());
-      return false;
-    }
-
-    // Output the port number
-    printf("The %s socket is listening on port %d\n", description.c_str(),
-           ntohs(addrConfig.sin_port));
-  } else {
-    if (!remoteConnect(sockOut, addrConfig)) {
-      perror("Server: failed remote connection to %s:%d", inet_ntoa(addrConfig.sin_addr),
-             ntohs(addrConfig.sin_port));
-      return false;
-    } else {
-      printf("The %s socket will send to %s:%d\n", description.c_str(),
-             inet_ntoa(addrConfig.sin_addr), ntohs(addrConfig.sin_port));
-    }
+  // Bind to a local port
+  if (bind(sockConn, (struct sockaddr*)&server, sizeof(server)) < 0) {
+    perror("Server: failed to bind connection socket");
+    return false;
   }
+
+  // Output the port number
+  printf("The connection socket is listening on port %d\n", ntohs(server.sin_port));
 
   // Return success
   return true;
@@ -159,6 +137,7 @@ bool RESTServer::initSocket(int& sockOut, sockaddr_in addrConfig, const std::str
 
 bool RESTServer::connectionReceive() {
   static char buf[4096];
+  struct sockaddr_in client;
   socklen_t client_address_size = sizeof(client);
 
   ssize_t recvLen = 0;
@@ -184,17 +163,13 @@ bool RESTServer::connectionReceive() {
     // Handle the connection message
     switch (message.type) {
       case E_TYPE_CONNECT:
-        if (streamSockets.find(clientKey) == streamSockets.end()) {
+        if (streams.find(clientKey) == streams.end()) {
           // Setup the streaming socket for this client
           client.sin_port = htons(message.port);
-          if (!initSocket(sockStream, client, "streaming")) {
-            close(sockStream);
-            sockStream = 0;
-            return false;
-          }
+          StreamSession* sockStream = new StreamSession(client);
 
           // Add the socket to the map
-          streamSockets[clientKey] = sockStream;
+          streams[clientKey] = sockStream;
         } else {
           fprintf(stderr, "Stream already open for %s:%d.\n", inet_ntoa(client.sin_addr),
                   message.port);
@@ -202,10 +177,10 @@ bool RESTServer::connectionReceive() {
         break;
 
       case E_TYPE_DISCONNECT:
-        if (streamSockets.find(clientKey) != streamSockets.end()) {
+        if (streams.find(clientKey) != streams.end()) {
           // Close the streaming socket for this client
-          close(streamSockets[clientKey]);
-          streamSockets.erase(clientKey);
+          delete streams[clientKey];
+          streams.erase(clientKey);
         } else {
           fprintf(stderr, "No stream open for %s:%d.\n", inet_ntoa(client.sin_addr), message.port);
           return false;
@@ -218,55 +193,5 @@ bool RESTServer::connectionReceive() {
     }
   }
 
-  return true;
-}
-
-bool RESTServer::remoteConnect(int& sockOut, sockaddr_in addrConfig) {
-  // Connect ot the host
-  int ret = connect(sockOut, (struct sockaddr*)&addrConfig, sizeof(addrConfig));
-  if (ret != 0 && errno != EINPROGRESS) {
-    perror("Server: remote connection failed (%d).\n", errno);
-    return false;
-  }
-
-  // Possibly wait for connection to complete
-  if (ret != 0) {
-    // Setup the socket polling struct
-    struct pollfd pfd;
-    pfd.fd = sockOut;
-    pfd.events = POLLOUT;
-    pfd.revents = 0;
-
-    // Wait up to 1s to connect
-    int n = poll(&pfd, 1, 1000);
-    if (n < 0) {
-      perror("Server: remote connection poll failed.\n");
-      return false;
-    }
-
-    // Timed out
-    if (n == 0 || !(pfd.revents & POLLOUT)) {
-      errno = ETIMEDOUT;
-      perror("Server: remote connection timed out.\n");
-      return false;
-    }
-  }
-
-  // Return success
-  return true;
-}
-
-bool RESTServer::streamSendData() {
-  // Send the data
-  std::string message = "Hello from the server!";
-  ssize_t sentLen = send(sockStream, message.c_str(), message.length(), 0);
-  if (sentLen < 0) {
-    perror("Server: failed to send data to %s:%d.\n", inet_ntoa(client.sin_addr),
-           ntohs(client.sin_port));
-    perror("Server: error code %d.\n", errno);
-    return false;
-  }
-
-  // Return success
   return true;
 }

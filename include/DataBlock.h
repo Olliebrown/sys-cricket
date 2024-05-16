@@ -7,7 +7,7 @@
 
 class DataBlock : public CheatSessionProvider {
  public:
-  DataBlock(u64 clientKey, const std::vector<u64>& offsets, size_t blockSize);
+  DataBlock(u64 clientKey, const u64* offsets, size_t offsetCount, size_t blockSize);
   ~DataBlock();
 
   inline u64 getClientKey() const { return clientKey; }

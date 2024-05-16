@@ -4,12 +4,12 @@
 #include "dmntcht.h"
 #include "res_macros.h"
 
-DataBlock::DataBlock(u64 clientKey, const std::vector<u64>& offsets, size_t blockSize) {
+DataBlock::DataBlock(u64 clientKey, const u64* offsets, size_t offsetCount, size_t blockSize) {
   directAddress = 0;
   this->clientKey = clientKey;
   this->blockSize = blockSize;
 
-  for (int i = 0; i < offsets.size(); i++) {
+  for (size_t i = 0; i < offsetCount; i++) {
     this->offsets.push_back(offsets[i]);
   }
 }
