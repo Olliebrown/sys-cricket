@@ -1,8 +1,8 @@
 #include "StreamSession.h"
 
-#include "utimer.h"
 #include <fcntl.h>
 #include <poll.h>
+#include <switch.h>
 #include <sys/errno.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -25,7 +25,7 @@ StreamSession::~StreamSession() {
 }
 
 uint64_t StreamSession::getClientKey(sockaddr_in sockAddr) {
-  (uint64_t) sockAddr.sin_addr.s_addr << 16 | sockAddr.sin_port;
+  return (uint64_t)sockAddr.sin_addr.s_addr << 16 | sockAddr.sin_port;
 }
 
 Waiter StreamSession::startStream(uint64_t interval) {
@@ -66,7 +66,8 @@ bool StreamSession::initSocket() {
   // Set to non-blocking mode
   int flags = fcntl(sockStream, F_GETFL, 0);
   if (flags == -1) {
-    fprintf(stderr, "Stream Session: can't set non-blocking / failed to read %s socket flags.\n");
+    fprintf(stderr,
+            "Stream Session: can't set non-blocking / failed to read stream socket flags.\n");
   } else if (fcntl(sockStream, F_SETFL, flags | O_NONBLOCK) != 0) {
     fprintf(stderr, "Stream Session: failed to set stream socket to non-blocking io.\n");
   }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 enum eConfigType { E_TYPE_CONNECT = 0, E_TYPE_DISCONNECT = 1, E_TYPE_UNKNOWN = 2 };

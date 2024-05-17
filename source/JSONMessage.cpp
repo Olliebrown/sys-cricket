@@ -15,9 +15,9 @@ ConfigMessage::ConfigMessage(const char* message) {
 
   // All messages must have a port and type
   if (DOM.HasMember("port") && DOM.HasMember("type")) {
-    if (DOM["type"].GetString() == "connect") {
+    if (strcmp(DOM["type"].GetString(), "connect") == 0) {
       this->type = E_TYPE_CONNECT;
-    } else if (DOM["type"].GetString() == "disconnect") {
+    } else if (strcmp(DOM["type"].GetString(), "disconnect") == 0) {
       this->type = E_TYPE_DISCONNECT;
     }
 
@@ -27,8 +27,8 @@ ConfigMessage::ConfigMessage(const char* message) {
     if (this->type == E_TYPE_CONNECT) {
       if (DOM.HasMember("offsets")) {
         this->offsetCount = DOM["offsets"].Size();
-        this->offsets = new u64[this->offsetCount];
-        for (int i = 0; i < this->offsetCount; i++) {
+        this->offsets = new uint64_t[this->offsetCount];
+        for (size_t i = 0; i < this->offsetCount; i++) {
           this->offsets[i] = DOM["offsets"][i].GetUint64();
         }
       }

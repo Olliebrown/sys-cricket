@@ -70,7 +70,7 @@ void StreamServer::threadMain() {
 
         // Other timer events
         default:
-          if (index >= 0 && index < waiters.size()) {
+          if (index >= 0 && index < (int)waiters.size()) {
           } else {
             fprintf(stdout, "Unknown event index %d\n", index);
           }
