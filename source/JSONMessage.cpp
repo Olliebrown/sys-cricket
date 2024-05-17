@@ -1,17 +1,51 @@
 #include "JSONMessage.h"
+#include "JSONMessageSchema.h"
 
 #include <rapidjson/document.h>
+#include <rapidjson/schema.h>
 using namespace rapidjson;
 
-ConfigMessage::ConfigMessage(const char* message) {
-  Document DOM;
-  DOM.Parse(message);
+SchemaValidator* getSchemaValidator() {
+  static SchemaDocument* configSchemaDoc = nullptr;
+  static SchemaValidator* configSchemaValidator = nullptr;
 
+  if (configSchemaValidator != nullptr) {
+    return configSchemaValidator;
+  }
+
+  Document configSchemaDOM;
+  configSchemaDOM.Parse(configMessageSchema);
+  configSchemaDoc = new SchemaDocument(configSchemaDOM);
+  configSchemaValidator = new SchemaValidator(*configSchemaDoc);
+  return configSchemaValidator;
+}
+
+ConfigMessage::ConfigMessage(const char* message) {
   this->type = E_TYPE_UNKNOWN;
   this->port = 0;
   this->offsets = nullptr;
   this->offsetCount = 0;
   this->blockSize = 0;
+  this->nsInterval = 3333333;  // 1/30th of a second
+
+  // Attempt to parse the JSON message
+  Document DOM;
+  if (DOM.Parse(message).HasParseError()) {
+    fprintf(stderr, "Error parsing JSON message.\n");
+    return;
+  }
+
+  // Validate the message against the schema
+  SchemaValidator* validator = getSchemaValidator();
+  if (!DOM.Accept(*validator)) {
+    StringBuffer sb;
+    validator->GetInvalidSchemaPointer().StringifyUriFragment(sb);
+    fprintf(stderr, "Invalid schema: %s\n", sb.GetString());
+    fprintf(stderr, "Invalid keyword: %s\n", validator->GetInvalidSchemaKeyword());
+    sb.Clear();
+
+    return;
+  }
 
   // All messages must have a port and type
   if (DOM.HasMember("port") && DOM.HasMember("type")) {
@@ -35,6 +69,10 @@ ConfigMessage::ConfigMessage(const char* message) {
 
       if (DOM.HasMember("blockSize")) {
         this->blockSize = DOM["blockSize"].GetUint();
+      }
+
+      if (DOM.HasMember("nsInterval")) {
+        this->nsInterval = DOM["nsInterval"].GetUint64();
       }
     }
   }

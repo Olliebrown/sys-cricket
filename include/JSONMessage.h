@@ -14,4 +14,5 @@ struct ConfigMessage {
   uint64_t* offsets;
   size_t offsetCount;
   size_t blockSize;
+  uint64_t nsInterval;
 };

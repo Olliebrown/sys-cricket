@@ -31,7 +31,11 @@ server.on('listening', () => {
 
   // Sending connection message
   const client = udp.createSocket('udp4')
-  client.send(address.port.toString(), SERVER_PORT, SERVER_ADDRESS, (error) => {
+
+  const message = {
+    type: 'connect'
+  }
+  client.send(JSON.stringify(message), SERVER_PORT, SERVER_ADDRESS, (error) => {
     if (error) {
       logClient.error('Client send error:')
       logClient.error(error)
@@ -48,4 +52,4 @@ server.on('close', () => {
 })
 
 // Bind the socket to a random local port
-server.bind()
+server.bind(58386)

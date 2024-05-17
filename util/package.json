@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "log": "node ./nxlink.js",
-    "client": "node ./client.js"
+    "client": "set DEBUG=streamer:* & node ./client.js"
   },
   "prettier": {
     "editorconfig": true
