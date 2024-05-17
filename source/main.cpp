@@ -2,7 +2,7 @@
 
 #include <switch.h>
 
-#include "RESTServer.h"
+#include "StreamServer.h"
 #include "fileLogging.h"
 #include "socketLogging.h"
 
@@ -75,7 +75,7 @@ int main() {
   }
 
   // Start the REST server
-  RESTServer* server = new RESTServer();
+  StreamServer* server = new StreamServer();
   server->startServer();
   return 0;
 }

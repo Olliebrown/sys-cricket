@@ -7,18 +7,18 @@
 #include <string>
 #include <vector>
 
-#include "StreamSession.h"
+#include "DataSession.h"
 
-class RESTServer : public ThreadedServer {
+class StreamServer : public ThreadedServer {
  public:
-  RESTServer();
-  virtual ~RESTServer() { }
+  StreamServer();
+  virtual ~StreamServer() { }
 
  protected:
   // Sockets and addresses
   int sockConn;
   struct sockaddr_in server;
-  std::map<u64, StreamSession*> streams;
+  std::map<u64, DataSession*> streams;
 
   // Internal timers and events
   UTimer connectTimer;

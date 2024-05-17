@@ -1,4 +1,4 @@
-#include "RESTServer.h"
+#include "StreamServer.h"
 
 #include <fcntl.h>
 #include <string.h>
@@ -18,7 +18,7 @@
 
 enum eEventID { EVENT_INDEX_UPDATE = 0, EVENT_INDEX_EXIT };
 
-RESTServer::RESTServer() : ThreadedServer(false) {
+StreamServer::StreamServer() : ThreadedServer(false) {
   // Set up the connection listening address
   server.sin_family = AF_INET;
   server.sin_port = htons(LISTENING_SOCKET_PORT);
@@ -28,7 +28,7 @@ RESTServer::RESTServer() : ThreadedServer(false) {
   sockConn = 0;
 }
 
-bool RESTServer::threadInit() {
+bool StreamServer::threadInit() {
   // Initialize timer and event handles
   utimerCreate(&connectTimer, 100000000, TimerType_Repeating);  // 1/10s
   ueventCreate(&exitEvent, false);
@@ -45,7 +45,7 @@ bool RESTServer::threadInit() {
   return true;
 }
 
-void RESTServer::threadMain() {
+void StreamServer::threadMain() {
   Result rc;
   int index;
 
@@ -81,7 +81,7 @@ void RESTServer::threadMain() {
 }
 
 // Send the thread the exit event
-void RESTServer::threadExit() {
+void StreamServer::threadExit() {
   // Signal the exit event
   ueventSignal(&exitEvent);
 
@@ -102,11 +102,11 @@ void RESTServer::threadExit() {
 }
 
 // Server control function
-void RESTServer::serverMain() {
+void StreamServer::serverMain() {
   utimerStart(&connectTimer);
 }
 
-bool RESTServer::initConnectionSocket() {
+bool StreamServer::initConnectionSocket() {
   // Create a UDP socket
   sockConn = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockConn < 0) {
@@ -135,7 +135,7 @@ bool RESTServer::initConnectionSocket() {
   return true;
 }
 
-bool RESTServer::connectionReceive() {
+bool StreamServer::connectionReceive() {
   static char buf[4096];
   struct sockaddr_in client;
   socklen_t client_address_size = sizeof(client);
@@ -152,21 +152,21 @@ bool RESTServer::connectionReceive() {
 
   // Process the received message
   if (recvLen > 0) {
-    printf("Connection message from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+    printf("Config message from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
     buf[recvLen] = '\0';  // Null-terminate the string
     printf("\t> %s\n", buf);
 
     // Parse the message and compute unique address-port key
-    ConnectMessage message = makeConnectMessage(buf);
-    u64 clientKey = (u64)client.sin_addr.s_addr << 16 | message.port;
+    ConfigMessage message(buf);
+    client.sin_port = htons(message.port);
+    u64 clientKey = StreamSession::getClientKey(client);
 
     // Handle the connection message
     switch (message.type) {
       case E_TYPE_CONNECT:
         if (streams.find(clientKey) == streams.end()) {
           // Setup the streaming socket for this client
-          client.sin_port = htons(message.port);
-          StreamSession* sockStream = new StreamSession(client);
+          DataSession* sockStream = new DataSession(client, message);
 
           // Add the socket to the map
           streams[clientKey] = sockStream;
@@ -188,7 +188,7 @@ bool RESTServer::connectionReceive() {
         break;
 
       default:
-        fprintf(stderr, "Server: invalid connection message received.\n");
+        fprintf(stderr, "Server: invalid config message received.\n");
         return false;
     }
   }

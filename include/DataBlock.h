@@ -1,24 +1,25 @@
 #pragma once
 
-#include <types.h>
 #include <vector>
 
 #include "CheatSessionProvider.h"
+#include "JSONMessage.h"
 
 class DataBlock : public CheatSessionProvider {
  public:
-  DataBlock(u64 clientKey, const u64* offsets, size_t offsetCount, size_t blockSize);
+  DataBlock(uint64_t clientKey, const uint64_t* offsets, size_t offsetCount, size_t blockSize);
+  DataBlock(uint64_t clientKey, const ConfigMessage& streamMessage);
   ~DataBlock();
 
-  inline u64 getClientKey() const { return clientKey; }
+  inline uint64_t getClientKey() const { return clientKey; }
   inline void ForceRecomputeOfDirectAddress() { directAddress = 0; }
 
   Result ReadMemory(void* buffer);
   Result ReadMemoryDirect(void* buffer);
 
  protected:
-  u64 clientKey;
-  std::vector<u64> offsets;
-  u64 directAddress;
+  uint64_t clientKey;
+  std::vector<uint64_t> offsets;
+  uint64_t directAddress;
   size_t blockSize;
 };

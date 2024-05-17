@@ -24,7 +24,11 @@ StreamSession::~StreamSession() {
   }
 }
 
-Waiter StreamSession::startStream(u64 interval) {
+uint64_t StreamSession::getClientKey(sockaddr_in sockAddr) {
+  (uint64_t) sockAddr.sin_addr.s_addr << 16 | sockAddr.sin_port;
+}
+
+Waiter StreamSession::startStream(uint64_t interval) {
   // Start the timer
   utimerCreate(&connectTimer, interval, TimerType_Repeating);
   utimerStart(&connectTimer);
