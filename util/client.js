@@ -9,6 +9,41 @@ const logClient = debug('streamer:client')
 const SERVER_PORT = 3000
 const SERVER_ADDRESS = '192.168.50.91'
 
+// Data to request (Current health)
+const currentHealthData = {
+  nickname: 'currentHealth',
+  offsets: [0x45d6750, 0x480, 0x130, 0x1f0, 0x150, 0x198],
+  dataType: 'i32',
+  dataCount: 1,
+  nsInterval: 1e9 // 1 second
+}
+
+const currentStaminaData = {
+  nickname: 'currentStamina',
+  offsets: [0x4649c10, 0x40, 0x934],
+  dataType: 'f32',
+  dataCount: 1,
+  nsInterval: 5e8 // 1/2 second
+}
+
+function wait (ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function sendConfigMessage (message) {
+  // Sending connection message
+  const client = udp.createSocket('udp4')
+  client.send(JSON.stringify(message), SERVER_PORT, SERVER_ADDRESS, (error) => {
+    if (error) {
+      logClient.error('Client send error:')
+      logClient.error(error)
+    } else {
+      logClient(`Sent message: ${JSON.stringify(message)}`)
+    }
+    client.close()
+  })
+}
+
 // Creating a udp socket
 const server = udp.createSocket('udp4')
 
@@ -25,25 +60,43 @@ server.on('message', (msg, info) => {
 })
 
 // Emits when socket is ready and listening for datagram msgs
-server.on('listening', () => {
+server.on('listening', async () => {
   const address = server.address()
   logServer(`Server is listening at ${address.address}:${address.port}`)
 
   // Sending connection message
-  const client = udp.createSocket('udp4')
-
-  const message = {
-    type: 'connect'
-  }
-  client.send(JSON.stringify(message), SERVER_PORT, SERVER_ADDRESS, (error) => {
-    if (error) {
-      logClient.error('Client send error:')
-      logClient.error(error)
-    } else {
-      logClient('Port sent')
-    }
-    client.close()
+  sendConfigMessage({
+    type: 'connect',
+    port: address.port
   })
+  await wait(500)
+  sendConfigMessage({
+    type: 'start',
+    port: address.port,
+    ...currentHealthData
+  })
+  await wait(500)
+  sendConfigMessage({
+    type: 'start',
+    port: address.port,
+    ...currentStaminaData
+  })
+  await wait(10000)
+  sendConfigMessage({
+    type: 'stop',
+    port: address.port,
+    nickname: currentHealthData.nickname
+  })
+  await wait(5000)
+  sendConfigMessage({
+    type: 'stop',
+    port: address.port,
+    nickname: currentStaminaData.nickname
+  })
+  await wait(100)
+  sendConfigMessage({ type: 'disconnect', port: address.port })
+  await wait(100)
+  process.exit(0)
 })
 
 // Emits after the socket is closed using socket.close();
@@ -52,4 +105,4 @@ server.on('close', () => {
 })
 
 // Bind the socket to a random local port
-server.bind(58386)
+server.bind()

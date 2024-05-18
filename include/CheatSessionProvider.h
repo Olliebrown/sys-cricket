@@ -13,10 +13,10 @@ class CheatSessionProvider {
 
  protected:
   static Title* s_runningGameTitle;
+  static bool s_hasMetadata;
   static DmntCheatProcessMetadata s_metadata;
 
  private:
-  static bool s_hasMetadata;
   static bool s_sysmodulePresent;
   static Debugger* s_debugger;
 };

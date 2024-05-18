@@ -3,7 +3,10 @@
 #include <string>
 #include <vector>
 
+#include <rapidjson/document.h>
 #include <switch.h>
+
+using namespace rapidjson;
 
 enum eRequestDataType {
   eRequestDataType_f64,
@@ -28,5 +31,5 @@ int sizeFromType(eRequestDataType dataType);
 float interpretAsFloat(u8* buffer);
 double interpretAsDouble(u8* buffer);
 
-bool getParams(const char* body, std::string& offsetStr, eRequestDataType& dataType, u64& count);
-std::vector<std::string> interpretDataType(eRequestDataType dataType, u8* buffer, u64 count);
+Value interpretDataType(eRequestDataType dataType, u8* buffer, u64 count,
+                        MemoryPoolAllocator<CrtAllocator>& allocator);

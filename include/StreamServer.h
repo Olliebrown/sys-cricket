@@ -3,8 +3,8 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 
-#include <map>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "DataSession.h"
@@ -18,7 +18,8 @@ class StreamServer : public ThreadedServer {
   // Sockets and addresses
   int sockConn;
   struct sockaddr_in server;
-  std::map<u64, DataSession*> streams;
+  std::unordered_map<std::string, DataSession*> streams;
+  std::vector<std::string> streamKeys;
 
   // Internal timers and events
   UTimer connectTimer;
@@ -38,4 +39,6 @@ class StreamServer : public ThreadedServer {
   // Communication functions
   bool initConnectionSocket();
   bool connectionReceive();
+  bool handleConnectionMessage(struct sockaddr_in client, const ConfigMessage& message,
+                               std::string parentKey, std::string clientKey);
 };

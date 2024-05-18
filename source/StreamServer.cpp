@@ -70,7 +70,11 @@ void StreamServer::threadMain() {
 
         // Other timer events
         default:
-          if (index >= 0 && index < (int)waiters.size()) {
+          index -= 2;
+          if (index >= 0 && index < (int)streamKeys.size()) {
+            fprintf(stdout, "Reading and sending data for stream %d\n", index);
+            fprintf(stdout, "> ClientKey: %s\n", streamKeys[index].c_str());
+            streams[streamKeys[index]]->readAndSendData();
           } else {
             fprintf(stdout, "Unknown event index %d\n", index);
           }
@@ -159,38 +163,99 @@ bool StreamServer::connectionReceive() {
     // Parse the message and compute unique address-port key
     ConfigMessage message(buf);
     client.sin_port = htons(message.port);
-    u64 clientKey = StreamSession::getClientKey(client);
+    std::string parentKey = StreamSession::getClientKey(client, "");
+    std::string clientKey = StreamSession::getClientKey(client, message.nickname);
 
     // Handle the connection message
-    switch (message.type) {
-      case E_TYPE_CONNECT:
-        if (streams.find(clientKey) == streams.end()) {
-          // Setup the streaming socket for this client
-          DataSession* sockStream = new DataSession(client, message);
+    return handleConnectionMessage(client, message, parentKey, clientKey);
+  }
 
-          // Add the socket to the map
-          streams[clientKey] = sockStream;
-        } else {
-          fprintf(stderr, "Stream already open for %s:%d.\n", inet_ntoa(client.sin_addr),
-                  message.port);
+  // If no message was received, just return true
+  return true;
+}
+
+bool StreamServer::handleConnectionMessage(struct sockaddr_in client, const ConfigMessage& message,
+                                           std::string parentKey, std::string clientKey) {
+  // Handle the connection message
+  switch (message.messageType) {
+    case eConfigType_Connect:
+      if (streams.find(parentKey) == streams.end()) {
+        // Setup the streaming socket for this client
+        DataSession* sockStream = new DataSession(client, message);
+        fprintf(stdout, "Parent StreamSession created for %s\n", parentKey.c_str());
+
+        // Add the socket to the map
+        streams[parentKey] = sockStream;
+
+        // Send status message then start the stream
+        sockStream->streamSendStatus();
+      } else {
+        fprintf(stderr, "StreamSession already open for %s:%d.\n", inet_ntoa(client.sin_addr),
+                message.port);
+        return false;
+      }
+      break;
+
+    case eConfigType_StartData:
+      if (streams.find(parentKey) != streams.end()) {
+        // Setup the streaming socket for this client
+        int parentSocket = streams[parentKey]->useSocket();
+        DataSession* sockStream = new DataSession(client, message, parentSocket);
+        fprintf(stdout, "DataSession created for %s\n", clientKey.c_str());
+
+        // Start the stream for this client
+        waiters.push_back(sockStream->startStream(message.nsInterval));
+        streams[clientKey] = sockStream;
+        streamKeys.push_back(clientKey);
+      } else {
+        fprintf(stderr, "Host not connected (%s:%d).\n", inet_ntoa(client.sin_addr), message.port);
+        return false;
+      }
+      break;
+
+    case eConfigType_StopData:
+      if (streams.find(clientKey) != streams.end()) {
+        streams[parentKey]->freeSocket();
+
+        // Close the streaming socket for this client
+        delete streams[clientKey];
+        streams.erase(clientKey);
+
+        // Delete matching stream and waiters from streamList
+        for (int i = 0; i < (int)streamKeys.size(); i++) {
+          if (streamKeys[i] == clientKey) {
+            streamKeys.erase(streamKeys.begin() + i);
+            waiters.erase(waiters.begin() + i + 2);
+            break;
+          }
         }
-        break;
+      } else {
+        fprintf(stderr, "No data stream for %s.\n", clientKey.c_str());
+        return false;
+      }
+      break;
 
-      case E_TYPE_DISCONNECT:
-        if (streams.find(clientKey) != streams.end()) {
-          // Close the streaming socket for this client
-          delete streams[clientKey];
-          streams.erase(clientKey);
-        } else {
-          fprintf(stderr, "No stream open for %s:%d.\n", inet_ntoa(client.sin_addr), message.port);
+    case eConfigType_Disconnect:
+      if (streams.find(parentKey) != streams.end()) {
+        // Is this parent stream still in use?
+        if (streams[parentKey]->getUseCount() > 0) {
+          fprintf(stderr, "Parent StreamSession still in use for %s:%d.\n",
+                  inet_ntoa(client.sin_addr), message.port);
           return false;
         }
-        break;
 
-      default:
-        fprintf(stderr, "Server: invalid config message received.\n");
+        // Close the streaming socket for this client
+        delete streams[parentKey];
+        streams.erase(parentKey);
+      } else {
+        fprintf(stderr, "No stream open for %s:%d.\n", inet_ntoa(client.sin_addr), message.port);
         return false;
-    }
+      }
+      break;
+
+    default:
+      fprintf(stderr, "Server: invalid config message received.\n");
+      return false;
   }
 
   return true;

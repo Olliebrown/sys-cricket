@@ -4,11 +4,12 @@
 #include <iomanip>
 #include <vector>
 
+using namespace rapidjson;
+
 std::string convertByteArrayToHex(u8* bytes, size_t size) {
   std::stringstream stream;
 
   stream << std::setfill('0') << std::hex;
-
   for (u64 i = 0; i < size; i++) {
     stream << std::setw(2) << static_cast<int>(bytes[i]);
   }
@@ -66,56 +67,10 @@ double interpretAsDouble(u8* buffer) {
   return result;
 }
 
-bool getParams(const char* body, std::string& offsetStr, eRequestDataType& dataType, u64& count) {
-  // Read URL parameters
-  // if (req.has_param("offset")) {
-  //   offsetStr = req.get_param_value("offset");
-  // }
-
-  // if (req.has_param("count")) {
-  //   std::string countStr = req.get_param_value("count");
-  //   try {
-  //     count = stoull(countStr, 0, 10);
-  //   } catch (const std::invalid_argument &ia) {
-  //     res.set_content("Invalid count", "text/plain");
-  //     res.status = 400;
-  //     return false;
-  //   }
-  // }
-
-  // if (req.has_param("type")) {
-  //   std::string dataTypeStr = req.get_param_value("type");
-  //   if (dataTypeStr == "f64") {
-  //     dataType = eRequestDataType_f64;
-  //   } else if (dataTypeStr == "f32") {
-  //     dataType = eRequestDataType_f32;
-  //   } else if (dataTypeStr == "i64") {
-  //     dataType = eRequestDataType_i64;
-  //   } else if (dataTypeStr == "i32") {
-  //     dataType = eRequestDataType_i32;
-  //   } else if (dataTypeStr == "i16") {
-  //     dataType = eRequestDataType_i16;
-  //   } else if (dataTypeStr == "u64") {
-  //     dataType = eRequestDataType_u64;
-  //   } else if (dataTypeStr == "u32") {
-  //     dataType = eRequestDataType_u32;
-  //   } else if (dataTypeStr == "u16") {
-  //     dataType = eRequestDataType_u16;
-  //   } else if (dataTypeStr == "u8") {
-  //     dataType = eRequestDataType_u8;
-  //   } else {
-  //     dataType = eRequestDataType_Invalid;
-  //     res.set_content("Invalid data type", "text/plain");
-  //     res.status = 400;
-  //     return false;
-  //   }
-  // }
-
-  return true;
-}
-
-std::vector<std::string> interpretDataType(eRequestDataType dataType, u8* buffer, u64 count) {
-  std::vector<std::string> contents;
+Value interpretDataType(eRequestDataType dataType, u8* buffer, u64 count,
+                        MemoryPoolAllocator<CrtAllocator>& allocator) {
+  Value contents(kArrayType);
+  contents.Reserve(count, allocator);
 
   u64 stride = sizeFromType(dataType);
   for (u64 i = 0; i < count; i++) {
@@ -125,27 +80,30 @@ std::vector<std::string> interpretDataType(eRequestDataType dataType, u8* buffer
       case eRequestDataType_u16:
       case eRequestDataType_u32:
       case eRequestDataType_u64:
-        contents.push_back(convertByteArrayToHex(ptr, stride));
+        contents.PushBack(Value(convertByteArrayToHex(ptr, stride).c_str(), allocator).Move(),
+                          allocator);
         break;
 
       case eRequestDataType_f64:
-        contents.push_back(std::to_string(interpretAsDouble(ptr)));
+        contents.PushBack(Value(std::to_string(interpretAsDouble(ptr)).c_str(), allocator).Move(),
+                          allocator);
         break;
 
       case eRequestDataType_f32:
-        contents.push_back(std::to_string(interpretAsFloat(ptr)));
+        contents.PushBack(Value(std::to_string(interpretAsFloat(ptr)).c_str(), allocator).Move(),
+                          allocator);
         break;
 
       case eRequestDataType_i64:
-        contents.push_back(std::to_string(*(s64*)ptr));
+        contents.PushBack(Value(std::to_string(*(s64*)ptr).c_str(), allocator).Move(), allocator);
         break;
 
       case eRequestDataType_i16:
-        contents.push_back(std::to_string(*(s16*)ptr));
+        contents.PushBack(Value(std::to_string(*(s16*)ptr).c_str(), allocator).Move(), allocator);
         break;
 
       case eRequestDataType_i32:
-        contents.push_back(std::to_string(*(s32*)ptr));
+        contents.PushBack(Value(std::to_string(*(s32*)ptr).c_str(), allocator).Move(), allocator);
         break;
 
       default:

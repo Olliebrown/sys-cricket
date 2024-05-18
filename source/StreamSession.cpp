@@ -1,5 +1,6 @@
 #include "StreamSession.h"
 
+#include <cstring>
 #include <fcntl.h>
 #include <poll.h>
 #include <switch.h>
@@ -7,43 +8,58 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-StreamSession::StreamSession(sockaddr_in clientAddr) {
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+using namespace rapidjson;
+
+StreamSession::StreamSession(sockaddr_in clientAddr, int sockStream) {
   this->clientAddr = clientAddr;
-  sockStream = 0;
+  this->sockStream = sockStream;
+  this->socketOwner = false;
 
   if (this->clientAddr.sin_addr.s_addr != 0 && this->clientAddr.sin_port != 0) {
-    initSocket();
+    if (sockStream <= 0) {
+      initSocket();
+      this->socketOwner = true;
+    }
   }
 }
 
 StreamSession::~StreamSession() {
   stopStream();
-  if (sockStream > 0) {
+  if (socketOwner && sockStream > 0) {
     close(sockStream);
     sockStream = 0;
   }
 }
 
-uint64_t StreamSession::getClientKey(sockaddr_in sockAddr) {
-  return (uint64_t)sockAddr.sin_addr.s_addr << 16 | sockAddr.sin_port;
+std::string StreamSession::getClientKey(sockaddr_in sockAddr, std::string nickname) {
+  return std::to_string((uint64_t)sockAddr.sin_addr.s_addr << 16 | sockAddr.sin_port) + nickname;
 }
 
 Waiter StreamSession::startStream(uint64_t interval) {
   // Start the timer
-  utimerCreate(&connectTimer, interval, TimerType_Repeating);
-  utimerStart(&connectTimer);
+  utimerCreate(&intervalTimer, interval, TimerType_Repeating);
+  utimerStart(&intervalTimer);
 
   // Return the waiter
-  return waiterForUTimer(&connectTimer);
+  return waiterForUTimer(&intervalTimer);
 }
 
 void StreamSession::stopStream() {
-  utimerStop(&connectTimer);
+  utimerStop(&intervalTimer);
 }
 
-bool StreamSession::streamSendData(std::string& message) const {
+bool StreamSession::streamSendData(const Document& message) {
+  StringBuffer strBuffer;
+  Writer<StringBuffer> writer(strBuffer);
+  message.Accept(writer);
+  return streamSendData(strBuffer.GetString());
+}
+
+bool StreamSession::streamSendData(const char* message) {
   // Send the data
-  ssize_t sentLen = send(sockStream, message.c_str(), message.length(), 0);
+  ssize_t sentLen = send(sockStream, message, strlen(message), 0);
   if (sentLen < 0) {
     fprintf(stderr, "Server: failed to send data to %s:%d.\n", inet_ntoa(clientAddr.sin_addr),
             ntohs(clientAddr.sin_port));

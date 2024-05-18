@@ -2,17 +2,28 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
-enum eConfigType { E_TYPE_CONNECT = 0, E_TYPE_DISCONNECT = 1, E_TYPE_UNKNOWN = 2 };
+#include "utils.h"
+
+enum eConfigType {
+  eConfigType_Connect = 0,
+  eConfigType_Disconnect = 1,
+  eConfigType_StartData = 2,
+  eConfigType_StopData = 3,
+  eConfigType_Invalid = 4
+};
 
 struct ConfigMessage {
   ConfigMessage(const char* message);
   ~ConfigMessage();
 
-  eConfigType type;
+  eConfigType messageType;
   uint16_t port;
+  std::string nickname;
   uint64_t* offsets;
   size_t offsetCount;
-  size_t blockSize;
+  eRequestDataType dataType;
+  size_t dataCount;
   uint64_t nsInterval;
 };

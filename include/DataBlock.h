@@ -7,19 +7,23 @@
 
 class DataBlock : public CheatSessionProvider {
  public:
-  DataBlock(uint64_t clientKey, const uint64_t* offsets, size_t offsetCount, size_t blockSize);
-  DataBlock(uint64_t clientKey, const ConfigMessage& streamMessage);
+  DataBlock(std::string clientKey, const uint64_t* offsets, size_t offsetCount, size_t blockSize);
+  DataBlock(std::string clientKey, const ConfigMessage& streamMessage);
   ~DataBlock();
 
-  inline uint64_t getClientKey() const { return clientKey; }
+  void init(std::string clientKey, const uint64_t* offsets, size_t offsetCount, size_t blockSize);
+  inline std::string getClientKey() const { return clientKey; }
   inline void ForceRecomputeOfDirectAddress() { directAddress = 0; }
 
+  Result GetStatus(char*& metadataJson);
   Result ReadMemory(void* buffer);
   Result ReadMemoryDirect(void* buffer);
 
  protected:
-  uint64_t clientKey;
+  std::string clientKey;
   std::vector<uint64_t> offsets;
   uint64_t directAddress;
   size_t blockSize;
+
+  friend class DataSession;
 };

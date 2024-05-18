@@ -5,6 +5,7 @@ bool CheatSessionProvider::s_hasMetadata = false;
 bool CheatSessionProvider::s_sysmodulePresent = false;
 Debugger* CheatSessionProvider::s_debugger = nullptr;
 Title* CheatSessionProvider::s_runningGameTitle = nullptr;
+DmntCheatProcessMetadata CheatSessionProvider::s_metadata;
 
 Result CheatSessionProvider::doWithCheatSession(std::function<Result()> func) {
   if (s_debugger == nullptr) {
@@ -29,9 +30,9 @@ Result CheatSessionProvider::doWithCheatSession(std::function<Result()> func) {
     s_hasMetadata = true;
   }
 
-  if (s_runningGameTitle == nullptr) {
-    s_runningGameTitle = new Title(s_metadata.title_id);
-  }
+  // if (s_runningGameTitle == nullptr) {
+  //   s_runningGameTitle = new Title(s_metadata.title_id);
+  // }
 
   auto rc = func();
   return rc;

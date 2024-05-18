@@ -3,7 +3,7 @@
 const char* configMessageSchema = R"(
   "type": "object",
   "properties": {
-    "type": {
+    "messageType": {
       "type": "string",
       "description": "Type of config message being sent."
     },
@@ -12,6 +12,10 @@ const char* configMessageSchema = R"(
       "description": "Port to communicate with",
       "minimum": 1,
       "maximum": 65535
+    },
+    "nickname": {
+      "type": "string",
+      "description": "Nickname for this data. Sent back with the data."
     },
     "offsets": {
       "type": "array",
