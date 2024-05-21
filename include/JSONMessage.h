@@ -12,7 +12,8 @@ enum eConfigType {
   eConfigType_StartData = 2,
   eConfigType_StopData = 3,
   eConfigType_Refresh = 4,
-  eConfigType_Invalid = 5
+  eConfigType_RemoteLog = 5,
+  eConfigType_Invalid = 6
 };
 
 struct ConfigMessage {

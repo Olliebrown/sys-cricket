@@ -16,6 +16,7 @@ StreamSession::StreamSession(sockaddr_in clientAddr, int sockStream) {
   this->clientAddr = clientAddr;
   this->sockStream = sockStream;
   this->socketOwner = false;
+  this->heartbeat = true;
 
   if (this->clientAddr.sin_addr.s_addr != 0 && this->clientAddr.sin_port != 0) {
     if (sockStream <= 0) {
@@ -75,7 +76,7 @@ bool StreamSession::initSocket() {
   // Create a UDP socket
   sockStream = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockStream < 0) {
-    fprintf(stderr, "Stream Session: failed to create stream socket");
+    fprintf(stderr, "Stream Session: failed to create stream socket\n");
     return false;
   }
 
@@ -89,7 +90,7 @@ bool StreamSession::initSocket() {
   }
 
   if (!remoteConnect()) {
-    fprintf(stderr, "Stream Session: failed remote connection to %s:%d",
+    fprintf(stderr, "Stream Session: failed remote connection to %s:%d\n",
             inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port));
     return false;
   } else {

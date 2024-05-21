@@ -58,6 +58,10 @@ ConfigMessage::ConfigMessage(const char* message) : nickname() {
       this->messageType = eConfigType_StartData;
     } else if (strcmp(DOM["type"].GetString(), "stop") == 0) {
       this->messageType = eConfigType_StopData;
+    } else if (strcmp(DOM["type"].GetString(), "refresh") == 0) {
+      this->messageType = eConfigType_Refresh;
+    } else if (strcmp(DOM["type"].GetString(), "remoteLog") == 0) {
+      this->messageType = eConfigType_RemoteLog;
     }
 
     this->port = DOM["port"].GetUint();

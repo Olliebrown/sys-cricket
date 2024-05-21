@@ -12,7 +12,10 @@
 #include "DataSession.h"
 
 // 6 seconds in nanoseconds
-#define TIMEOUT_INTERVAL 6000000000
+#define TIMEOUT_INTERVAL 6E9
+
+// Put a cap on the number of active streams (for DOS protection)
+#define MAX_ACTIVE_STREAMS 50
 
 class StreamServer : public ThreadedServer {
  public:
@@ -21,7 +24,7 @@ class StreamServer : public ThreadedServer {
 
  protected:
   // Sockets and addresses
-  int sockConn;
+  int sockConn, socketNXLink;
   struct sockaddr_in server;
   std::unordered_map<std::string, DataSession*> streams;
   std::vector<std::string> streamKeys;

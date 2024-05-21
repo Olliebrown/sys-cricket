@@ -1,8 +1,8 @@
 #include "title.h"
 #include "res_macros.h"
 
-#include <memory>
 #include <cstring>
+#include <memory>
 
 Title::Title(FsSaveDataInfo& saveInfo) {
   initFromApplicationId(saveInfo.application_id);
@@ -37,18 +37,20 @@ Result Title::initFromApplicationId(u64 applicationId) {
   // if (R_FAILED(rc)) {
   //   m_errorCode = 2;
   //   m_errorResult = rc;
-  //   fprintf(stderr, "ERROR: ns initialization failed (%d, %d, %d).\n", m_errorCode, R_MODULE(m_errorResult), R_DESCRIPTION(m_errorResult));
-  //   return m_errorResult;
+  //   fprintf(stderr, "ERROR: ns initialization failed (%d, %d, %d).\n", m_errorCode,
+  //   R_MODULE(m_errorResult), R_DESCRIPTION(m_errorResult)); return m_errorResult;
   // }
 
   // Populate buffer with data
   fprintf(stdout, "  > Retrieving application data.\n");
   size_t outsize = 0;
-  rc = nsGetApplicationControlData(NsApplicationControlSource_StorageOnly, applicationId, buf.get(), sizeof(NsApplicationControlData), &outsize);
+  rc = nsGetApplicationControlData(NsApplicationControlSource_StorageOnly, applicationId, buf.get(),
+                                   sizeof(NsApplicationControlData), &outsize);
   if (R_FAILED(rc)) {
     m_errorCode = 3;
     m_errorResult = rc;
-    fprintf(stderr, "ERROR: retrieving application data failed (%d, %d, %d).\n", m_errorCode, R_MODULE(m_errorResult), R_DESCRIPTION(m_errorResult));
+    fprintf(stderr, "ERROR: retrieving application data failed (%d, %d, %d).\n", m_errorCode,
+            R_MODULE(m_errorResult), R_DESCRIPTION(m_errorResult));
     return m_errorResult;
   }
 
@@ -61,12 +63,13 @@ Result Title::initFromApplicationId(u64 applicationId) {
 
   // Retrieve the language specific entry for this title
   fprintf(stdout, "  > Retrieving application language entry.\n");
-  NacpLanguageEntry *langentry = nullptr;
+  NacpLanguageEntry* langentry = nullptr;
   rc = nacpGetLanguageEntry(&buf->nacp, &langentry);
-  if (R_FAILED(rc) || langentry==nullptr) {
+  if (R_FAILED(rc) || langentry == nullptr) {
     m_errorCode = 5;
     m_errorResult = rc || MAKERESULT(module_generic, generic_allocation);
-    fprintf(stderr, "ERROR: retrieving language entry failed (%d, %d, %d).\n", m_errorCode, R_MODULE(m_errorResult), R_DESCRIPTION(m_errorResult));
+    fprintf(stderr, "ERROR: retrieving language entry failed (%d, %d, %d).\n", m_errorCode,
+            R_MODULE(m_errorResult), R_DESCRIPTION(m_errorResult));
     return m_errorResult;
   }
 

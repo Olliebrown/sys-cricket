@@ -68,7 +68,7 @@ int ThreadedServer::runServerThread() {
   Result rc;
   Thread thread;
 
-  ThreadedServer::printf("Creating thread\n");
+  printf("Creating thread\n");
   rc = threadCreate(&thread, ThreadedServer::threadWrapper, NULL, NULL, 0x10000, 0x2C, -2);
 
   // If successfully created, start the thread

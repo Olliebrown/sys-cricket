@@ -10,6 +10,7 @@
 #include <string>
 
 #include "JSONMessage.h"
+#include "socketLogging.h"
 
 // Port to listen for connection messages (UDP)
 #ifndef LISTENING_SOCKET_PORT
@@ -55,9 +56,12 @@ void StreamServer::threadMain() {
     // Wait for the next event
     rc = waitObjects(&index, waiters.data(), waiters.size(), -1);
     if (R_SUCCEEDED(rc)) {
+      fflush(stdout);
       switch (index) {
         // Check for new connections
         case EVENT_INDEX_UPDATE:
+          fprintf(stdout, "Connection Event\n");
+          fflush(stdout);
           if (sockConn > 0) {
             connectionReceive();
           }
@@ -65,24 +69,26 @@ void StreamServer::threadMain() {
 
         // Was an exit requested?
         case EVENT_INDEX_EXIT:
+          fprintf(stdout, "Exit Event\n");
+          fflush(stdout);
           exitRequested = true;
           break;
 
         // Other timer events
         default:
           index -= 2;
+          fprintf(stdout, "Event index %d\n", index);
+          fflush(stdout);
           if (index >= 0 && index < (int)streamKeys.size()) {
             const std::string& clientKey = streamKeys[index];
-            // TODO: Fix this, causes crash
-            //   if (streams[clientKey]->isParent()) {
-            //     if (!streams[clientKey]->checkForHeartbeat()) {
-            //       fprintf(stdout, "Parent StreamSession %s has timed out.\n", clientKey.c_str());
-            //       fflush(stdout);
-            //       releaseParentSession(clientKey, true);
-            //     }
-            //   } else {
-            streams[clientKey]->readAndSendData();
-            // }
+            if (streams[clientKey]->isParent()) {
+              if (!streams[clientKey]->checkForHeartbeat()) {
+                fprintf(stdout, "Parent StreamSession %s has timed out.\n", clientKey.c_str());
+                releaseParentSession(clientKey, true);
+              }
+            } else {
+              streams[clientKey]->readAndSendData();
+            }
           } else {
             fprintf(stdout, "Unknown event index %d\n", index);
           }
@@ -122,7 +128,7 @@ bool StreamServer::initConnectionSocket() {
   // Create a UDP socket
   sockConn = socket(AF_INET, SOCK_DGRAM, 0);
   if (sockConn < 0) {
-    perror("Server: failed to create connection socket");
+    perror("Server: failed to create connection socket\n");
     return false;
   }
 
@@ -136,7 +142,7 @@ bool StreamServer::initConnectionSocket() {
 
   // Bind to a local port
   if (bind(sockConn, (struct sockaddr*)&server, sizeof(server)) < 0) {
-    perror("Server: failed to bind connection socket");
+    perror("Server: failed to bind connection socket\n");
     return false;
   }
 
@@ -157,7 +163,7 @@ bool StreamServer::connectionReceive() {
                           &client_address_size))
       < 0) {
     if (errno != EAGAIN && errno != EWOULDBLOCK) {
-      perror("Server: error listening for message (%l)", recvLen);
+      perror("Server: error listening for message (%l)\n", recvLen);
       return false;
     }
   }
@@ -187,6 +193,11 @@ bool StreamServer::handleConnectionMessage(struct sockaddr_in& client, const Con
   // Handle the connection message
   switch (message.messageType) {
     case eConfigType_Connect:
+      if (streams.size() >= MAX_ACTIVE_STREAMS) {
+        fprintf(stderr, "Server: maximum number of streams reached.\n");
+        return false;
+      }
+
       if (streams.find(parentKey) == streams.end()) {
         return startParentSession(client, message, parentKey);
       } else {
@@ -206,6 +217,11 @@ bool StreamServer::handleConnectionMessage(struct sockaddr_in& client, const Con
       break;
 
     case eConfigType_StartData:
+      if (streams.size() >= MAX_ACTIVE_STREAMS) {
+        fprintf(stderr, "Server: maximum number of streams reached.\n");
+        return false;
+      }
+
       if (streams.find(parentKey) != streams.end()) {
         return startDataSession(client, message, parentKey, clientKey);
       } else {
@@ -234,10 +250,21 @@ bool StreamServer::handleConnectionMessage(struct sockaddr_in& client, const Con
       }
       break;
 
+    case eConfigType_RemoteLog:
+      socketNXLink = redirectOutputToSockets(inet_ntoa(client.sin_addr), message.port);
+      if (socketNXLink < 0) {
+        fprintf(stderr, "Error: failed to connect to logging socket host. (%s:%d, %d)\n",
+                inet_ntoa(client.sin_addr), message.port, socketNXLink);
+        return false;
+      }
+      break;
+
     default:
-      fprintf(stderr, "Server: invalid config message received.\n");
+      fprintf(stderr, "Server: invalid config message received.\n\n");
       return false;
   }
+
+  return true;
 }
 
 bool StreamServer::startParentSession(sockaddr_in& client, const ConfigMessage& message,
@@ -249,10 +276,9 @@ bool StreamServer::startParentSession(sockaddr_in& client, const ConfigMessage& 
   // Add the socket to the map
   streams[parentKey] = sockStream;
 
-  // TODO: Fix this, causes crash
   // Start the timer for this client
-  // waiters.push_back(sockStream->startStream(TIMEOUT_INTERVAL));
-  // streamKeys.push_back(parentKey);
+  waiters.push_back(sockStream->startStream(TIMEOUT_INTERVAL));
+  streamKeys.push_back(parentKey);
 
   // Send initial status message
   sockStream->streamSendStatus();
@@ -282,6 +308,16 @@ bool StreamServer::releaseParentSession(const std::string& parentKey, bool killC
   // Close the streaming socket for this client
   delete streams[parentKey];
   streams.erase(parentKey);
+
+  // Delete matching stream and waiters from streamList
+  for (int i = 0; i < (int)streamKeys.size(); i++) {
+    if (streamKeys[i] == parentKey) {
+      streamKeys.erase(streamKeys.begin() + i);
+      waiters.erase(waiters.begin() + i + 2);
+      break;
+    }
+  }
+
   fprintf(stdout, "Parent Session stopped for %s\n", parentKey.c_str());
   return true;
 }

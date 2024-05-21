@@ -5,12 +5,12 @@
 #include <unistd.h>
 
 static FILE* fileHandle = nullptr;
-int redirectOutputToFile(const char* filepath, bool append)
-{
+int redirectOutputToFile(const char* filepath, bool append) {
   // Open file for output
   fileHandle = fopen(filepath, (append ? "a" : "w"));
   if (fileHandle == nullptr) {
-    fprintf(stderr, "File Logging: Failed to open %s for redirecting stdout and stderr.\n", filepath);
+    fprintf(stderr, "File Logging: Failed to open %s for redirecting stdout and stderr.\n",
+            filepath);
     return -1;
   }
 
