@@ -72,9 +72,17 @@ void StreamServer::threadMain() {
         default:
           index -= 2;
           if (index >= 0 && index < (int)streamKeys.size()) {
-            fprintf(stdout, "Reading and sending data for stream %d\n", index);
-            fprintf(stdout, "> ClientKey: %s\n", streamKeys[index].c_str());
-            streams[streamKeys[index]]->readAndSendData();
+            const std::string& clientKey = streamKeys[index];
+            // TODO: Fix this, causes crash
+            //   if (streams[clientKey]->isParent()) {
+            //     if (!streams[clientKey]->checkForHeartbeat()) {
+            //       fprintf(stdout, "Parent StreamSession %s has timed out.\n", clientKey.c_str());
+            //       fflush(stdout);
+            //       releaseParentSession(clientKey, true);
+            //     }
+            //   } else {
+            streams[clientKey]->readAndSendData();
+            // }
           } else {
             fprintf(stdout, "Unknown event index %d\n", index);
           }
@@ -156,9 +164,8 @@ bool StreamServer::connectionReceive() {
 
   // Process the received message
   if (recvLen > 0) {
-    printf("Config message from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
-    buf[recvLen] = '\0';  // Null-terminate the string
-    printf("\t> %s\n", buf);
+    // Null-terminate the string
+    buf[recvLen] = '\0';
 
     // Parse the message and compute unique address-port key
     ConfigMessage message(buf);
@@ -174,21 +181,14 @@ bool StreamServer::connectionReceive() {
   return true;
 }
 
-bool StreamServer::handleConnectionMessage(struct sockaddr_in client, const ConfigMessage& message,
-                                           std::string parentKey, std::string clientKey) {
+bool StreamServer::handleConnectionMessage(struct sockaddr_in& client, const ConfigMessage& message,
+                                           const std::string& parentKey,
+                                           const std::string& clientKey) {
   // Handle the connection message
   switch (message.messageType) {
     case eConfigType_Connect:
       if (streams.find(parentKey) == streams.end()) {
-        // Setup the streaming socket for this client
-        DataSession* sockStream = new DataSession(client, message);
-        fprintf(stdout, "Parent StreamSession created for %s\n", parentKey.c_str());
-
-        // Add the socket to the map
-        streams[parentKey] = sockStream;
-
-        // Send status message then start the stream
-        sockStream->streamSendStatus();
+        return startParentSession(client, message, parentKey);
       } else {
         fprintf(stderr, "StreamSession already open for %s:%d.\n", inet_ntoa(client.sin_addr),
                 message.port);
@@ -196,17 +196,18 @@ bool StreamServer::handleConnectionMessage(struct sockaddr_in client, const Conf
       }
       break;
 
+    case eConfigType_Disconnect:
+      if (streams.find(parentKey) != streams.end()) {
+        return releaseParentSession(parentKey);
+      } else {
+        fprintf(stderr, "No stream open for %s:%d.\n", inet_ntoa(client.sin_addr), message.port);
+        return false;
+      }
+      break;
+
     case eConfigType_StartData:
       if (streams.find(parentKey) != streams.end()) {
-        // Setup the streaming socket for this client
-        int parentSocket = streams[parentKey]->useSocket();
-        DataSession* sockStream = new DataSession(client, message, parentSocket);
-        fprintf(stdout, "DataSession created for %s\n", clientKey.c_str());
-
-        // Start the stream for this client
-        waiters.push_back(sockStream->startStream(message.nsInterval));
-        streams[clientKey] = sockStream;
-        streamKeys.push_back(clientKey);
+        return startDataSession(client, message, parentKey, clientKey);
       } else {
         fprintf(stderr, "Host not connected (%s:%d).\n", inet_ntoa(client.sin_addr), message.port);
         return false;
@@ -215,40 +216,20 @@ bool StreamServer::handleConnectionMessage(struct sockaddr_in client, const Conf
 
     case eConfigType_StopData:
       if (streams.find(clientKey) != streams.end()) {
-        streams[parentKey]->freeSocket();
-
-        // Close the streaming socket for this client
-        delete streams[clientKey];
-        streams.erase(clientKey);
-
-        // Delete matching stream and waiters from streamList
-        for (int i = 0; i < (int)streamKeys.size(); i++) {
-          if (streamKeys[i] == clientKey) {
-            streamKeys.erase(streamKeys.begin() + i);
-            waiters.erase(waiters.begin() + i + 2);
-            break;
-          }
-        }
+        return releaseDataSession(parentKey, clientKey);
       } else {
         fprintf(stderr, "No data stream for %s.\n", clientKey.c_str());
         return false;
       }
       break;
 
-    case eConfigType_Disconnect:
+    case eConfigType_Refresh:
       if (streams.find(parentKey) != streams.end()) {
-        // Is this parent stream still in use?
-        if (streams[parentKey]->getUseCount() > 0) {
-          fprintf(stderr, "Parent StreamSession still in use for %s:%d.\n",
-                  inet_ntoa(client.sin_addr), message.port);
-          return false;
-        }
-
-        // Close the streaming socket for this client
-        delete streams[parentKey];
-        streams.erase(parentKey);
+        streams[parentKey]->setHeartbeat(true);
+        streams[parentKey]->streamSendStatus();
+        return true;
       } else {
-        fprintf(stderr, "No stream open for %s:%d.\n", inet_ntoa(client.sin_addr), message.port);
+        fprintf(stderr, "Refresh for non-existant stream for %s.\n", parentKey.c_str());
         return false;
       }
       break;
@@ -257,6 +238,86 @@ bool StreamServer::handleConnectionMessage(struct sockaddr_in client, const Conf
       fprintf(stderr, "Server: invalid config message received.\n");
       return false;
   }
+}
 
+bool StreamServer::startParentSession(sockaddr_in& client, const ConfigMessage& message,
+                                      const std::string& parentKey) {
+  // Setup the streaming socket for this client
+  DataSession* sockStream = new DataSession(client, message);
+  fprintf(stdout, "Parent StreamSession created for %s\n", parentKey.c_str());
+
+  // Add the socket to the map
+  streams[parentKey] = sockStream;
+
+  // TODO: Fix this, causes crash
+  // Start the timer for this client
+  // waiters.push_back(sockStream->startStream(TIMEOUT_INTERVAL));
+  // streamKeys.push_back(parentKey);
+
+  // Send initial status message
+  sockStream->streamSendStatus();
+  return true;
+}
+
+bool StreamServer::releaseParentSession(const std::string& parentKey, bool killChildren) {
+  // Is this parent stream still in use?
+  if (streams[parentKey]->getUseCount() > 0) {
+    if (!killChildren) {
+      fprintf(stderr, "Parent StreamSession still in use for %s.\n", parentKey.c_str());
+      fflush(stderr);
+      return false;
+    }
+
+    // Kill all child streams
+    fprintf(stdout, "Stopping child streams for %s.\n", parentKey.c_str());
+    fflush(stdout);
+    const StreamSession* parent = streams[parentKey];
+    for (auto& stream : streams) {
+      if (stream.second->childOf(*parent)) {
+        releaseDataSession(parentKey, stream.first);
+      }
+    }
+  }
+
+  // Close the streaming socket for this client
+  delete streams[parentKey];
+  streams.erase(parentKey);
+  fprintf(stdout, "Parent Session stopped for %s\n", parentKey.c_str());
+  return true;
+}
+
+bool StreamServer::startDataSession(struct sockaddr_in& client, const ConfigMessage& message,
+                                    const std::string& parentKey, const std::string& clientKey) {
+  // Setup the streaming socket for this client
+  int parentSocket = streams[parentKey]->useSocket();
+  DataSession* sockStream = new DataSession(client, message, parentSocket);
+  fprintf(stdout, "DataSession created for %s\n", clientKey.c_str());
+
+  // Start the stream for this client
+  waiters.push_back(sockStream->startStream(message.nsInterval));
+  streams[clientKey] = sockStream;
+  streamKeys.push_back(clientKey);
+  return true;
+}
+
+bool StreamServer::releaseDataSession(const std::string& parentKey, const std::string& clientKey) {
+  streams[parentKey]->freeSocket();
+  fprintf(stdout, "Stopping DataSession for %s\n", clientKey.c_str());
+  fflush(stdout);
+
+  // Close the streaming socket for this client
+  delete streams[clientKey];
+  streams.erase(clientKey);
+
+  // Delete matching stream and waiters from streamList
+  for (int i = 0; i < (int)streamKeys.size(); i++) {
+    if (streamKeys[i] == clientKey) {
+      streamKeys.erase(streamKeys.begin() + i);
+      waiters.erase(waiters.begin() + i + 2);
+      break;
+    }
+  }
+
+  fprintf(stdout, "DataSession stopped for %s\n", clientKey.c_str());
   return true;
 }

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <switch.h>
 
 // This class is a base class for creating a server that runs in its own thread

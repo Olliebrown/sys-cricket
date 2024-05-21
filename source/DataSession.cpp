@@ -61,9 +61,6 @@ bool DataSession::readAndSendData() {
   // Read the data
   Result result = dataBlock->ReadMemory(this->buffer);
   if (R_SUCCEEDED(result)) {
-    fprintf(stdout, "Building Raw Data\n");
-    fflush(stdout);
-
     // Turn data into JSON message
     Value rawData = interpretDataType(dataType, (u8*)buffer, dataCount, contents.GetAllocator());
     contents.AddMember("data", rawData.Move(), contents.GetAllocator());
@@ -74,7 +71,5 @@ bool DataSession::readAndSendData() {
     contents.AddMember("description", R_DESCRIPTION(result), contents.GetAllocator());
   }
 
-  fprintf(stdout, "Sending JSON\n");
-  fflush(stdout);
   return streamSendData(contents);
 }

@@ -85,25 +85,23 @@ Value interpretDataType(eRequestDataType dataType, u8* buffer, u64 count,
         break;
 
       case eRequestDataType_f64:
-        contents.PushBack(Value(std::to_string(interpretAsDouble(ptr)).c_str(), allocator).Move(),
-                          allocator);
+        contents.PushBack(Value(interpretAsDouble(ptr)).Move(), allocator);
         break;
 
       case eRequestDataType_f32:
-        contents.PushBack(Value(std::to_string(interpretAsFloat(ptr)).c_str(), allocator).Move(),
-                          allocator);
+        contents.PushBack(Value(interpretAsFloat(ptr)).Move(), allocator);
         break;
 
       case eRequestDataType_i64:
-        contents.PushBack(Value(std::to_string(*(s64*)ptr).c_str(), allocator).Move(), allocator);
+        contents.PushBack(Value(*(s64*)ptr).Move(), allocator);
         break;
 
       case eRequestDataType_i16:
-        contents.PushBack(Value(std::to_string(*(s16*)ptr).c_str(), allocator).Move(), allocator);
+        contents.PushBack(Value(*(s16*)ptr).Move(), allocator);
         break;
 
       case eRequestDataType_i32:
-        contents.PushBack(Value(std::to_string(*(s32*)ptr).c_str(), allocator).Move(), allocator);
+        contents.PushBack(Value(*(s32*)ptr).Move(), allocator);
         break;
 
       default:

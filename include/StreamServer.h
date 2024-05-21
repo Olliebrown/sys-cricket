@@ -1,3 +1,5 @@
+#pragma once
+
 #include "ThreaddedServer.h"
 
 #include <arpa/inet.h>
@@ -8,6 +10,9 @@
 #include <vector>
 
 #include "DataSession.h"
+
+// 6 seconds in nanoseconds
+#define TIMEOUT_INTERVAL 6000000000
 
 class StreamServer : public ThreadedServer {
  public:
@@ -39,6 +44,14 @@ class StreamServer : public ThreadedServer {
   // Communication functions
   bool initConnectionSocket();
   bool connectionReceive();
-  bool handleConnectionMessage(struct sockaddr_in client, const ConfigMessage& message,
-                               std::string parentKey, std::string clientKey);
+  bool handleConnectionMessage(struct sockaddr_in& client, const ConfigMessage& message,
+                               const std::string& parentKey, const std::string& clientKey);
+
+  bool startParentSession(struct sockaddr_in& client, const ConfigMessage& message,
+                          const std::string& parentKey);
+  bool releaseParentSession(const std::string& parentKey, bool killChildren = true);
+
+  bool startDataSession(struct sockaddr_in& client, const ConfigMessage& message,
+                        const std::string& parentKey, const std::string& clientKey);
+  bool releaseDataSession(const std::string& parentKey, const std::string& clientKey);
 };
