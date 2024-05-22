@@ -38,11 +38,13 @@ bool DataSession::streamSendStatus() {
     success = streamSendData(metadataJson);
     free(metadataJson);
   } else {
+
     Document contents(kObjectType);
-    contents.AddMember("messageType", "status", contents.GetAllocator());
-    contents.AddMember("error", "Failed to get status", contents.GetAllocator());
-    contents.AddMember("module", R_MODULE(result), contents.GetAllocator());
-    contents.AddMember("description", R_DESCRIPTION(result), contents.GetAllocator());
+    auto a = contents.GetAllocator();
+    contents.AddMember("messageType", Value("status", a).Move(), a);
+    contents.AddMember("error", Value("Failed to get status", a).Move(), a);
+    contents.AddMember("module", Value(R_MODULE(result)).Move(), a);
+    contents.AddMember("description", Value(R_DESCRIPTION(result)), a);
     success = streamSendData(contents);
   }
 

@@ -49,7 +49,8 @@ ConfigMessage::ConfigMessage(const char* message) : nickname() {
   }
 
   // All messages must have a port and type
-  if (DOM.HasMember("port") && DOM.HasMember("type")) {
+  if (DOM.HasMember("port") && DOM.HasMember("type") && DOM["type"].IsString()
+      && DOM["port"].IsUint()) {
     if (strcmp(DOM["type"].GetString(), "connect") == 0) {
       this->messageType = eConfigType_Connect;
     } else if (strcmp(DOM["type"].GetString(), "disconnect") == 0) {
@@ -67,21 +68,23 @@ ConfigMessage::ConfigMessage(const char* message) : nickname() {
     this->port = DOM["port"].GetUint();
 
     // Might have nickname
-    if (DOM.HasMember("nickname")) {
+    if (DOM.HasMember("nickname") && DOM["nickname"].IsString()) {
       this->nickname = std::string(DOM["nickname"].GetString(), DOM["nickname"].GetStringLength());
     }
 
     // If this is a new connection message, parse the offsets and block size
     if (this->messageType == eConfigType_StartData) {
-      if (DOM.HasMember("offsets")) {
+      if (DOM.HasMember("offsets") && DOM["offsets"].IsArray()) {
         this->offsetCount = DOM["offsets"].Size();
         this->offsets = new uint64_t[this->offsetCount];
         for (size_t i = 0; i < this->offsetCount; i++) {
-          this->offsets[i] = DOM["offsets"][i].GetUint64();
+          if (DOM["offsets"][i].IsUint64()) {
+            this->offsets[i] = DOM["offsets"][i].GetUint64();
+          }
         }
       }
 
-      if (DOM.HasMember("dataType")) {
+      if (DOM.HasMember("dataType") && DOM["dataType"].IsString()) {
         if (strcmp(DOM["dataType"].GetString(), "u8") == 0) {
           this->dataType = eRequestDataType_u8;
         } else if (strcmp(DOM["dataType"].GetString(), "u16") == 0) {
@@ -103,11 +106,11 @@ ConfigMessage::ConfigMessage(const char* message) : nickname() {
         }
       }
 
-      if (DOM.HasMember("dataCount")) {
+      if (DOM.HasMember("dataCount") && DOM["dataCount"].IsUint64()) {
         this->dataCount = DOM["dataCount"].GetUint64();
       }
 
-      if (DOM.HasMember("nsInterval")) {
+      if (DOM.HasMember("nsInterval") && DOM["nsInterval"].IsUint64()) {
         this->nsInterval = DOM["nsInterval"].GetUint64();
       }
     }

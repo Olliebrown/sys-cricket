@@ -60,8 +60,6 @@ void StreamServer::threadMain() {
       switch (index) {
         // Check for new connections
         case EVENT_INDEX_UPDATE:
-          fprintf(stdout, "Connection Event\n");
-          fflush(stdout);
           if (sockConn > 0) {
             connectionReceive();
           }
@@ -69,16 +67,12 @@ void StreamServer::threadMain() {
 
         // Was an exit requested?
         case EVENT_INDEX_EXIT:
-          fprintf(stdout, "Exit Event\n");
-          fflush(stdout);
           exitRequested = true;
           break;
 
         // Other timer events
         default:
           index -= 2;
-          fprintf(stdout, "Event index %d\n", index);
-          fflush(stdout);
           if (index >= 0 && index < (int)streamKeys.size()) {
             const std::string& clientKey = streamKeys[index];
             if (streams[clientKey]->isParent()) {
