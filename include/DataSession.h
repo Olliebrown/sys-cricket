@@ -12,6 +12,7 @@ class DataSession : public StreamSession {
 
   bool streamSendStatus();
   bool readAndSendData();
+  bool pokeData(void* data);
 
   std::string getMyClientKey() const override { return getClientKey(clientAddr, nickname); }
 

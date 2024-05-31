@@ -23,8 +23,13 @@ DataSession::DataSession(sockaddr_in clientAddr, const ConfigMessage& streamMess
 }
 
 DataSession::~DataSession() {
+  // Stop stream first
+  stopStream();
+
   // Delete the data block
   delete dataBlock;
+
+  // Free the local buffer
   free(this->buffer);
 }
 
@@ -74,4 +79,9 @@ bool DataSession::readAndSendData() {
   }
 
   return streamSendData(contents);
+}
+
+bool DataSession::pokeData(void* data) {
+  Result result = dataBlock->WriteMemory(this->buffer);
+  return R_SUCCEEDED(result);
 }

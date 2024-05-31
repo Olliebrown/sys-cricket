@@ -61,49 +61,65 @@ Result DataBlock::GetStatus(char*& metadataJson) {
   });
 }
 
-Result DataBlock::ReadMemory(void* buffer) {
-  uint64_t memoryBase = s_metadata.main_nso_extents.base;  // s_metadata.heap_extents.base;
-  return doWithCheatSession([this, memoryBase, buffer]() {
-    uint64_t currentBase = memoryBase;
-    for (std::vector<uint64_t>::const_iterator it = offsets.begin(); it != offsets.end(); ++it) {
-      if (std::next(it) != offsets.end()) {
-        // Read pointer at each offset to get the next base address
-        Result result = dmntchtReadCheatProcessMemory(currentBase + *it, (void*)&currentBase,
-                                                      sizeof(uint64_t));
-        if (R_FAILED(result)) {
-          fprintf(stderr, "DataBlock: indirect read of %#018lx failed (%u, %u)\n",
-                  currentBase + *it, R_MODULE(result), R_DESCRIPTION(result));
-          return result;
-        }
-      } else {
-        // For last offset, read the actual data into the buffer
-        directAddress = currentBase + *it;
-        Result result = dmntchtReadCheatProcessMemory(directAddress, buffer, blockSize);
-        if (R_FAILED(result)) {
-          fprintf(stderr, "DataBlock: indirect read of %#018lx failed (%u, %u)\n", directAddress,
-                  R_MODULE(result), R_DESCRIPTION(result));
-          return result;
-        }
+uint64_t ComputeDirectAddress(uint64_t memoryBase, const std::vector<uint64_t>& offsets) {
+  uint64_t currentBase = memoryBase;
+  for (std::vector<uint64_t>::const_iterator it = offsets.begin(); it != offsets.end(); ++it) {
+    if (std::next(it) != offsets.end()) {
+      // Read pointer at each offset to get the next base address
+      Result result
+          = dmntchtReadCheatProcessMemory(currentBase + *it, (void*)&currentBase, sizeof(uint64_t));
+      if (R_FAILED(result)) {
+        fprintf(stderr, "DataBlock: indirect read of %#018lx failed (%u, %u)\n", currentBase + *it,
+                R_MODULE(result), R_DESCRIPTION(result));
+        return 0;
       }
+    } else {
+      // For last offset, read the actual data into the buffer
+      return currentBase + *it;
+    }
+  }
+}
+
+Result DataBlock::ReadMemory(void* buffer) {
+  return doWithCheatSession([this, buffer]() {
+    // Compute the direct address if needed
+    if (this->directAddress == 0) {
+      this->directAddress = ComputeDirectAddress(s_metadata.main_nso_extents.base, offsets);
+      if (this->directAddress == 0) {
+        return (unsigned)MAKERESULT(module_syscricket, syscricket_memoryReadError);
+      }
+    }
+
+    // Read the value
+    Result result = dmntchtReadCheatProcessMemory(directAddress, buffer, blockSize);
+    if (R_FAILED(result)) {
+      fprintf(stderr, "DataBlock: read of %#018lx failed (%u, %u)\n", directAddress,
+              R_MODULE(result), R_DESCRIPTION(result));
+      return result;
     }
 
     return (unsigned)R_SUCCESS;
   });
 }
 
-Result DataBlock::ReadMemoryDirect(void* buffer) {
-  // Have we computed the direct address yet?
-  if (directAddress == 0) {
-    return this->ReadMemory(buffer);
-  }
-
+Result DataBlock::WriteMemory(void* buffer) {
   return doWithCheatSession([this, buffer]() {
-    Result result = dmntchtReadCheatProcessMemory(directAddress, buffer, blockSize);
+    // Compute the direct address if needed
+    if (this->directAddress == 0) {
+      this->directAddress = ComputeDirectAddress(s_metadata.main_nso_extents.base, offsets);
+      if (this->directAddress == 0) {
+        return (unsigned)MAKERESULT(module_syscricket, syscricket_memoryReadError);
+      }
+    }
+
+    // Write the provided value(s) into memory
+    Result result = dmntchtWriteCheatProcessMemory(directAddress, buffer, blockSize);
     if (R_FAILED(result)) {
-      fprintf(stderr, "DataBlock: direct read of %#018lx failed (%u, %u)\n", directAddress,
+      fprintf(stderr, "DataBlock: write of %#018lx failed (%u, %u)\n", directAddress,
               R_MODULE(result), R_DESCRIPTION(result));
       return result;
     }
+
     return (unsigned)R_SUCCESS;
   });
 }

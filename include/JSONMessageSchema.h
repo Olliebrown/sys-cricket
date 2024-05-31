@@ -1,6 +1,6 @@
 #pragma once
 
-const char* configMessageSchema = R"(
+const char* configMessageSchema = R"({
   "type": "object",
   "properties": {
     "messageType": {
@@ -34,6 +34,14 @@ const char* configMessageSchema = R"(
       "description": "The number of values to read",
       "minimum": 0
     },
+    "dataArray": {
+      "type": "array",
+      "description": "Array of values to be placed (poked) into memory",
+      "minItems": 0,
+      "items": {
+        "type": "number"
+      }
+    },
     "nsInterval": {
       "type": "integer",
       "description": "How often to read and send this block of memory",
@@ -41,7 +49,7 @@ const char* configMessageSchema = R"(
     }
   },
   "required": [
-    "type",
+    "messageType",
     "port"
   ]
 })";

@@ -17,7 +17,7 @@ class DataBlock : public CheatSessionProvider {
 
   Result GetStatus(char*& metadataJson);
   Result ReadMemory(void* buffer);
-  Result ReadMemoryDirect(void* buffer);
+  Result WriteMemory(void* buffer);
 
  protected:
   std::string clientKey;

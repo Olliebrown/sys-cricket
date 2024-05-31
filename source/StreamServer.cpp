@@ -224,6 +224,16 @@ bool StreamServer::handleConnectionMessage(struct sockaddr_in& client, const Con
       }
       break;
 
+    case eConfigType_PokeData:
+      if (streams.find(clientKey) != streams.end()) {
+        streams[clientKey]->pokeData(message.dataArray);
+        return true;
+      } else {
+        fprintf(stderr, "No data stream for %s.\n", clientKey.c_str());
+        return false;
+      }
+      break;
+
     case eConfigType_StopData:
       if (streams.find(clientKey) != streams.end()) {
         return releaseDataSession(parentKey, clientKey);
@@ -284,24 +294,21 @@ bool StreamServer::releaseParentSession(const std::string& parentKey, bool killC
   if (streams[parentKey]->getUseCount() > 0) {
     if (!killChildren) {
       fprintf(stderr, "Parent StreamSession still in use for %s.\n", parentKey.c_str());
-      fflush(stderr);
       return false;
     }
 
     // Kill all child streams
     fprintf(stdout, "Stopping child streams for %s.\n", parentKey.c_str());
-    fflush(stdout);
     const StreamSession* parent = streams[parentKey];
-    for (auto& stream : streams) {
-      if (stream.second->childOf(*parent)) {
-        releaseDataSession(parentKey, stream.first);
+    while (streams[parentKey]->getUseCount() > 0) {
+      for (auto& stream : streams) {
+        if (stream.second->childOf(*parent)) {
+          releaseDataSession(parentKey, stream.first);
+          break;  // Leave the loop because iterator will have been invalidated
+        }
       }
     }
   }
-
-  // Close the streaming socket for this client
-  delete streams[parentKey];
-  streams.erase(parentKey);
 
   // Delete matching stream and waiters from streamList
   for (int i = 0; i < (int)streamKeys.size(); i++) {
@@ -312,7 +319,9 @@ bool StreamServer::releaseParentSession(const std::string& parentKey, bool killC
     }
   }
 
-  fprintf(stdout, "Parent Session stopped for %s\n", parentKey.c_str());
+  // Close the streaming socket for this client
+  delete streams[parentKey];
+  streams.erase(parentKey);
   return true;
 }
 
@@ -331,13 +340,7 @@ bool StreamServer::startDataSession(struct sockaddr_in& client, const ConfigMess
 }
 
 bool StreamServer::releaseDataSession(const std::string& parentKey, const std::string& clientKey) {
-  streams[parentKey]->freeSocket();
   fprintf(stdout, "Stopping DataSession for %s\n", clientKey.c_str());
-  fflush(stdout);
-
-  // Close the streaming socket for this client
-  delete streams[clientKey];
-  streams.erase(clientKey);
 
   // Delete matching stream and waiters from streamList
   for (int i = 0; i < (int)streamKeys.size(); i++) {
@@ -348,6 +351,9 @@ bool StreamServer::releaseDataSession(const std::string& parentKey, const std::s
     }
   }
 
-  fprintf(stdout, "DataSession stopped for %s\n", clientKey.c_str());
+  // Close the streaming socket for this client
+  streams[parentKey]->freeSocket();
+  delete streams[clientKey];
+  streams.erase(clientKey);
   return true;
 }

@@ -12,11 +12,14 @@
 #include <rapidjson/writer.h>
 using namespace rapidjson;
 
-StreamSession::StreamSession(sockaddr_in clientAddr, int sockStream) {
+StreamSession::StreamSession(sockaddr_in clientAddr, int sockStream) : intervalTimer() {
   this->clientAddr = clientAddr;
   this->sockStream = sockStream;
+
+  this->useCount = 0;
   this->socketOwner = false;
   this->heartbeat = true;
+  this->destroyed = false;
 
   if (this->clientAddr.sin_addr.s_addr != 0 && this->clientAddr.sin_port != 0) {
     if (sockStream <= 0) {
@@ -27,10 +30,18 @@ StreamSession::StreamSession(sockaddr_in clientAddr, int sockStream) {
 }
 
 StreamSession::~StreamSession() {
+  // Stop stream first
   stopStream();
+
+  // If owner of socket, close it
   if (socketOwner && sockStream > 0) {
-    close(sockStream);
-    sockStream = 0;
+    if (useCount > 0) {
+      fprintf(stderr, "StreamSession Destructor ERROR: socket still in use\n");
+      fflush(stderr);
+    } else {
+      close(sockStream);
+      sockStream = 0;
+    }
   }
 }
 

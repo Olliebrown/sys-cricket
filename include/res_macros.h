@@ -20,6 +20,7 @@ enum {
   syscricket_noTitleInfo,
   syscricket_badTitleInfo,
   syscricket_dmntcht_error,
+  syscricket_memoryReadError,
   syscricket_badMetadata
 };
 

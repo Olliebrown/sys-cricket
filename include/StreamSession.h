@@ -53,6 +53,7 @@ class StreamSession {
   UTimer intervalTimer;
   bool socketOwner;
   bool heartbeat;
+  bool destroyed;
 
   bool initSocket();
   bool remoteConnect();
