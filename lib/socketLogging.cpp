@@ -12,6 +12,13 @@
 
 static int sock = -1;
 int redirectOutputToSockets(const char* hostAddress, uint16_t hostPort) {
+  // Close existing socket if it is open
+  if (sock >= 0) {
+    fprintf(stderr, "Socket Logging: closing existing socket connection.\n");
+    close(sock);
+    sock = -1;
+  }
+
   // Create new socket
   sock = socket(AF_INET, SOCK_STREAM, 0);
   if (sock < 0) {

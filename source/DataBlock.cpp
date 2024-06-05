@@ -18,22 +18,24 @@
              convertNumToHexString((extents).base + (extents).size, 10, true).c_str())
 
 DataBlock::DataBlock(std::string clientKey, const uint64_t* offsets, size_t offsetCount,
-                     size_t blockSize) {
-  init(clientKey, offsets, offsetCount, blockSize);
+                     size_t blockSize, bool isDynamic) {
+  init(clientKey, offsets, offsetCount, blockSize, isDynamic);
 }
 
 DataBlock::DataBlock(std::string clientKey, const ConfigMessage& streamMessage) {
   uint64_t blockSize = sizeFromType(streamMessage.dataType) * streamMessage.dataCount;
-  init(clientKey, streamMessage.offsets, streamMessage.offsetCount, blockSize);
+  init(clientKey, streamMessage.offsets, streamMessage.offsetCount, blockSize,
+       streamMessage.isDynamic);
 }
 
 DataBlock::~DataBlock() { }
 
 void DataBlock::init(std::string clientKey, const uint64_t* offsets, size_t offsetCount,
-                     size_t blockSize) {
+                     size_t blockSize, bool isDynamic) {
   directAddress = 0;
   this->clientKey = clientKey;
   this->blockSize = blockSize;
+  this->isDynamic = isDynamic;
 
   for (size_t i = 0; i < offsetCount; i++) {
     this->offsets.push_back(offsets[i]);
@@ -78,12 +80,14 @@ uint64_t ComputeDirectAddress(uint64_t memoryBase, const std::vector<uint64_t>& 
       return currentBase + *it;
     }
   }
+
+  return 0;
 }
 
 Result DataBlock::ReadMemory(void* buffer) {
   return doWithCheatSession([this, buffer]() {
     // Compute the direct address if needed
-    if (this->directAddress == 0) {
+    if (this->isDynamic || this->directAddress == 0) {
       this->directAddress = ComputeDirectAddress(s_metadata.main_nso_extents.base, offsets);
       if (this->directAddress == 0) {
         return (unsigned)MAKERESULT(module_syscricket, syscricket_memoryReadError);
@@ -105,7 +109,7 @@ Result DataBlock::ReadMemory(void* buffer) {
 Result DataBlock::WriteMemory(void* buffer) {
   return doWithCheatSession([this, buffer]() {
     // Compute the direct address if needed
-    if (this->directAddress == 0) {
+    if (this->isDynamic || this->directAddress == 0) {
       this->directAddress = ComputeDirectAddress(s_metadata.main_nso_extents.base, offsets);
       if (this->directAddress == 0) {
         return (unsigned)MAKERESULT(module_syscricket, syscricket_memoryReadError);

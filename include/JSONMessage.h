@@ -23,6 +23,7 @@ struct ConfigMessage {
 
   eConfigType messageType;
   uint16_t port;
+  bool isDynamic;
   std::string nickname;
   uint64_t* offsets;
   size_t offsetCount;

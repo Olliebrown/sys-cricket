@@ -13,6 +13,10 @@ const char* configMessageSchema = R"({
       "minimum": 1,
       "maximum": 65535
     },
+    "isDynamic": {
+      "type": "boolean",
+      "description": "Whether the offset pointers are dynamic or not"
+    },
     "nickname": {
       "type": "string",
       "description": "Nickname for this data. Sent back with the data."

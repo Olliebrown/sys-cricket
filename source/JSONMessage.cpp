@@ -33,6 +33,7 @@ ConfigMessage::ConfigMessage(const char* message) : nickname() {
   this->dataCount = 0;
   this->dataArray = nullptr;
   this->nsInterval = 3333333;  // 1/30th of a second
+  this->isDynamic = false;
 
   // Attempt to parse the JSON message
   Document DOM;
@@ -62,6 +63,11 @@ ConfigMessage::ConfigMessage(const char* message) : nickname() {
     // Might have nickname
     if (DOM.HasMember("nickname") && DOM["nickname"].IsString()) {
       this->nickname = std::string(DOM["nickname"].GetString(), DOM["nickname"].GetStringLength());
+    }
+
+    // Might have dynamic offsets
+    if (DOM.HasMember("isDynamic") && DOM["isDynamic"].IsBool()) {
+      this->isDynamic = DOM["isDynamic"].GetBool();
     }
 
     // If this is a new or poke connection message, parse the offsets and block size

@@ -7,11 +7,13 @@
 
 class DataBlock : public CheatSessionProvider {
  public:
-  DataBlock(std::string clientKey, const uint64_t* offsets, size_t offsetCount, size_t blockSize);
+  DataBlock(std::string clientKey, const uint64_t* offsets, size_t offsetCount, size_t blockSize,
+            bool isDynamic = false);
   DataBlock(std::string clientKey, const ConfigMessage& streamMessage);
   ~DataBlock();
 
-  void init(std::string clientKey, const uint64_t* offsets, size_t offsetCount, size_t blockSize);
+  void init(std::string clientKey, const uint64_t* offsets, size_t offsetCount, size_t blockSize,
+            bool isDynamic);
   inline std::string getClientKey() const { return clientKey; }
   inline void ForceRecomputeOfDirectAddress() { directAddress = 0; }
 
@@ -24,6 +26,7 @@ class DataBlock : public CheatSessionProvider {
   std::vector<uint64_t> offsets;
   uint64_t directAddress;
   size_t blockSize;
+  bool isDynamic;
 
   friend class DataSession;
 };
